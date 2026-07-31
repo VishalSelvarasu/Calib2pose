@@ -1,21 +1,3 @@
-"""
-Validate the calibration pipeline against known ground truth.
-
-    python 00_synthetic_test.py
-    python 00_synthetic_test.py --blur 1.5 --noise 3 --frontal-only
-
-Renders the board from known camera poses through a known K and known
-distortion, then runs the exact same detect-and-solve path as the real data.
-Because the true answer is known, the output is an ERROR, not just a residual.
-
-This is the half of stage 1 that makes the project worth reading. On real
-hardware nobody knows the true intrinsics, so a low RMS is unfalsifiable.
-Here it is falsifiable.
-
-Try --frontal-only to watch the failure mode I keep warning about: RMS stays
-low while the recovered distortion coefficients go badly wrong.
-"""
-
 import argparse
 import os
 import subprocess
@@ -38,8 +20,7 @@ def render_view(board_img, board_size_m, K, dist, rvec, tvec, img_size):
 
     obj = np.array([[0, 0, 0], [bw_m, 0, 0], [bw_m, bh_m, 0], [0, bh_m, 0]],
                    dtype=np.float64)
-    # Project through the ideal pinhole only; distortion is applied afterwards
-    # as an image-space remap so the two effects stay separable.
+
     proj, _ = cv2.projectPoints(obj, rvec, tvec, K, None)
     proj = proj.reshape(-1, 2).astype(np.float32)
 
@@ -51,14 +32,6 @@ def render_view(board_img, board_size_m, K, dist, rvec, tvec, img_size):
                                 borderMode=cv2.BORDER_CONSTANT,
                                 borderValue=255)
 
-    # Apply FORWARD distortion. Note the direction carefully: remap needs, for
-    # each pixel of the distorted output, the source coordinate in the ideal
-    # image. That is exactly what undistortPoints computes.
-    #
-    # initUndistortRectifyMap gives the opposite map (distorted -> ideal). Using
-    # it here silently produces inverse distortion, and since inverse radial
-    # distortion is roughly negated distortion for small k, the calibration
-    # then recovers k1 with a flipped sign and everything still looks plausible.
     return cv2.remap(ideal, *_forward_distort_map(K, dist, W, H),
                      cv2.INTER_LINEAR,
                      borderMode=cv2.BORDER_CONSTANT, borderValue=255)
@@ -118,8 +91,10 @@ def main():
     ap.add_argument("--height", type=int, default=720)
     ap.add_argument("--blur", type=float, default=0.8,
                     help="gaussian sigma, mimics soft webcam optics")
-    ap.add_argument("--noise", type=float, default=2.0, help="sensor noise sigma")
-    ap.add_argument("--jpeg", type=int, default=88, help="MJPG-like compression")
+    ap.add_argument("--noise", type=float, default=2.0,
+                    help="sensor noise sigma")
+    ap.add_argument("--jpeg", type=int, default=88,
+                    help="MJPG-like compression")
     ap.add_argument("--frontal-only", action="store_true",
                     help="generate the BAD pose set, to see the failure mode")
     ap.add_argument("--no-calibrate", action="store_true")
@@ -162,8 +137,8 @@ def main():
           f"noise {args.noise}, jpeg {args.jpeg}"
           f"{', FRONTAL-ONLY' if args.frontal_only else ''})")
     print("\nground truth")
-    print(f"  fx {K_true[0,0]:.3f}  fy {K_true[1,1]:.3f}  "
-          f"cx {K_true[0,2]:.3f}  cy {K_true[1,2]:.3f}")
+    print(f"  fx {K_true[0, 0]:.3f}  fy {K_true[1, 1]:.3f}  "
+          f"cx {K_true[0, 2]:.3f}  cy {K_true[1, 2]:.3f}")
     print(f"  dist {dist_true}")
 
     np.savez(os.path.join(OUT, "ground_truth.npz"), K=K_true, dist=dist_true)
@@ -172,7 +147,8 @@ def main():
         return
 
     print("\n" + "=" * 62)
-    subprocess.run([sys.executable, "03_calibrate.py", "--images", OUT], check=True)
+    subprocess.run([sys.executable, "03_calibrate.py",
+                   "--images", OUT], check=True)
 
     import json
     with open("results/intrinsics.json") as f:

@@ -1,28 +1,3 @@
-"""
-Solve camera intrinsics from the captured ChArUco images.
-
-    python 03_calibrate.py
-    python 03_calibrate.py --square-mm 24.83 --drop-worst 1.5 --k3
-
-Outputs:
-    results/intrinsics.json     fx fy cx cy, distortion, errors, provenance
-    results/coverage.png        where the corners actually landed
-    results/undistorted.png     before/after, for the README
-
-What to read in the output, in order of importance:
-
-  1. Split-half agreement. Calibrate on half the views, then the other half.
-     If fx disagrees by more than ~1%, the solution is not constrained and the
-     low RMS is meaningless. This is the check almost nobody runs.
-
-  2. Corner coverage. Distortion is only observable where you put corners.
-     Empty image periphery means k1/k2 are extrapolating.
-
-  3. RMS reprojection error. Last, not first. It is trivially made small by
-     capturing 20 near-identical frontal views, which is exactly the failure
-     the other two checks catch.
-"""
-
 import argparse
 import glob
 import json
@@ -49,14 +24,15 @@ def collect(paths, board, detector, min_corners):
         if size is None:
             size = (img.shape[1], img.shape[0])
         elif (img.shape[1], img.shape[0]) != size:
-            # Mixed resolutions silently corrupt the fit: one K cannot describe
-            # two sensor scalings.
-            rejected.append((p, f"size {img.shape[1]}x{img.shape[0]} != {size}"))
+
+            rejected.append(
+                (p, f"size {img.shape[1]}x{img.shape[0]} != {size}"))
             continue
 
         ch_c, ch_id, _, _ = detector.detectBoard(img)
         if ch_id is None or len(ch_id) < min_corners:
-            rejected.append((p, f"only {0 if ch_id is None else len(ch_id)} corners"))
+            rejected.append(
+                (p, f"only {0 if ch_id is None else len(ch_id)} corners"))
             continue
 
         o, i = board.matchImagePoints(ch_c, ch_id)
@@ -126,8 +102,10 @@ def coverage_image(all_corners, size, path):
         for x, y in c:
             cv2.circle(canvas, (int(x), int(y)), 3, (70, 220, 120), -1)
     for i in range(1, 3):
-        cv2.line(canvas, (int(i * w / 3), 0), (int(i * w / 3), h), (70, 70, 70), 1)
-        cv2.line(canvas, (0, int(i * h / 3)), (w, int(i * h / 3)), (70, 70, 70), 1)
+        cv2.line(canvas, (int(i * w / 3), 0),
+                 (int(i * w / 3), h), (70, 70, 70), 1)
+        cv2.line(canvas, (0, int(i * h / 3)),
+                 (w, int(i * h / 3)), (70, 70, 70), 1)
 
     pts = np.vstack(all_corners)
     empty = []
@@ -159,14 +137,16 @@ def main():
 
     os.makedirs(RESULTS, exist_ok=True)
 
-    square_m = (args.square_mm / 1000.0) if args.square_mm else bc.SQUARE_LENGTH_M
+    square_m = (args.square_mm /
+                1000.0) if args.square_mm else bc.SQUARE_LENGTH_M
     board = bc.get_board(square_m)
     detector = bc.get_detector(board)
 
     paths = sorted(glob.glob(os.path.join(args.images, "*.png")) +
                    glob.glob(os.path.join(args.images, "*.jpg")))
     if not paths:
-        raise SystemExit(f"No images in {args.images}/. Run 02_capture.py first.")
+        raise SystemExit(
+            f"No images in {args.images}/. Run 02_capture.py first.")
 
     obj_pts, img_pts, used, rejected, size, all_corners = collect(
         paths, board, detector, args.min_corners
@@ -178,26 +158,32 @@ def main():
         raise SystemExit("Need at least 6 usable views. Capture more.")
 
     fix_k3 = not args.k3
-    rms, K, dist, rvecs, tvecs = run_calibration(obj_pts, img_pts, size, fix_k3)
+    rms, K, dist, rvecs, tvecs = run_calibration(
+        obj_pts, img_pts, size, fix_k3)
     errs = per_view_errors(obj_pts, img_pts, rvecs, tvecs, K, dist)
 
     if args.drop_worst is not None:
         keep = [i for i in range(len(errs)) if errs[i] <= args.drop_worst]
-        dropped = [used[i] for i in range(len(errs)) if errs[i] > args.drop_worst]
+        dropped = [used[i]
+                   for i in range(len(errs)) if errs[i] > args.drop_worst]
         if dropped and len(keep) >= 6:
-            print(f"\ndropping {len(dropped)} views over {args.drop_worst} px:")
+            print(
+                f"\ndropping {len(dropped)} views over {args.drop_worst} px:")
             for d in dropped:
                 print(f"  {os.path.basename(d)}")
             obj_pts = [obj_pts[i] for i in keep]
             img_pts = [img_pts[i] for i in keep]
             all_corners = [all_corners[i] for i in keep]
             used = [used[i] for i in keep]
-            rms, K, dist, rvecs, tvecs = run_calibration(obj_pts, img_pts, size, fix_k3)
+            rms, K, dist, rvecs, tvecs = run_calibration(
+                obj_pts, img_pts, size, fix_k3)
             errs = per_view_errors(obj_pts, img_pts, rvecs, tvecs, K, dist)
 
-    fovx, fovy, focal_mm, pp, ar = cv2.calibrationMatrixValues(K, size, 0.0, 0.0)
+    fovx, fovy, focal_mm, pp, ar = cv2.calibrationMatrixValues(
+        K, size, 0.0, 0.0)
     split = split_half_check(obj_pts, img_pts, size, fix_k3)
-    empty_zones = coverage_image(all_corners, size, os.path.join(RESULTS, "coverage.png"))
+    empty_zones = coverage_image(
+        all_corners, size, os.path.join(RESULTS, "coverage.png"))
 
     # visual proof, straight lines should end up straight
     sample = cv2.imread(used[len(used) // 2])
@@ -207,11 +193,13 @@ def main():
                 np.hstack([sample, undist]))
 
     print("\n--- intrinsics ---------------------------------------------")
-    print(f"fx {K[0,0]:9.3f}   fy {K[1,1]:9.3f}")
-    print(f"cx {K[0,2]:9.3f}   cy {K[1,2]:9.3f}   (image centre "
+    print(f"fx {K[0, 0]:9.3f}   fy {K[1, 1]:9.3f}")
+    print(f"cx {K[0, 2]:9.3f}   cy {K[1, 2]:9.3f}   (image centre "
           f"{size[0]/2:.1f}, {size[1]/2:.1f})")
-    print(f"dist {np.array2string(dist.ravel(), precision=5, suppress_small=True)}")
-    print(f"FOV  {fovx:.1f} x {fovy:.1f} deg    aspect fy/fx {K[1,1]/K[0,0]:.4f}")
+    print(
+        f"dist {np.array2string(dist.ravel(), precision=5, suppress_small=True)}")
+    print(
+        f"FOV  {fovx:.1f} x {fovy:.1f} deg    aspect fy/fx {K[1, 1]/K[0, 0]:.4f}")
 
     print("\n--- errors -------------------------------------------------")
     print(f"RMS reprojection : {rms:.4f} px   over {len(used)} views")
@@ -233,7 +221,8 @@ def main():
         print("split-half       : skipped (need >= 8 views)")
 
     if empty_zones:
-        print(f"sparse zones     : {[(gx, gy, n) for gx, gy, n in empty_zones]}")
+        print(
+            f"sparse zones     : {[(gx, gy, n) for gx, gy, n in empty_zones]}")
         print("  >> distortion is extrapolating there. See results/coverage.png.")
     else:
         print("coverage         : all 9 zones populated")

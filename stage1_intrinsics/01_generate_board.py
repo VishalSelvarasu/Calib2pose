@@ -1,20 +1,3 @@
-"""
-Generate a printable ChArUco board.
-
-    python 01_generate_board.py
-
-Outputs:
-    board/charuco_A4.pdf   <- PRINT THIS, at 100% / "Actual size"
-    board/charuco_A4.png   <- preview / for rendering in simulation later
-
-Print settings that matter:
-    - Scale: 100% or "Actual size". NOT "Fit to page".
-    - Greyscale, maximum quality, no toner-save.
-    - Then tape it FLAT to something rigid (clipboard, foamboard, glass).
-      A curled sheet is an unmodelled error you cannot average away.
-    - Then measure a square and update SQUARE_LENGTH_MM in board_config.py.
-"""
-
 import os
 import numpy as np
 import cv2

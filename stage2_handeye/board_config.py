@@ -8,6 +8,7 @@ MARKER_LENGTH_MM = 18.0
 
 ARUCO_DICT_ID = cv2.aruco.DICT_5X5_100
 
+# --- printing -----------------------------------------------------------------
 PRINT_DPI = 200
 PAGE_W_MM = 210.0   # A4
 PAGE_H_MM = 297.0
@@ -39,6 +40,7 @@ def get_detector(board=None):
     board = board if board is not None else get_board()
 
     det_params = cv2.aruco.DetectorParameters()
+
     det_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
     det_params.cornerRefinementWinSize = 5
     det_params.adaptiveThreshWinSizeMin = 3
@@ -57,6 +59,25 @@ def get_detector(board=None):
     return cv2.aruco.CharucoDetector(
         board, charuco_params, det_params, refine_params
     )
+
+
+def normalize_charuco(charuco_corners, charuco_ids):
+
+    import numpy as np
+
+    if charuco_corners is None or charuco_ids is None or len(charuco_ids) == 0:
+        return None, None
+    corners = np.asarray(charuco_corners, dtype=np.float32).reshape(-1, 1, 2)
+    ids = np.asarray(charuco_ids, dtype=np.int32).reshape(-1, 1)
+    return corners, ids
+
+
+def detect(detector, gray):
+    """detectBoard + shape normalisation. Use this instead of calling
+    detector.detectBoard directly."""
+    ch_c, ch_id, mk_c, mk_id = detector.detectBoard(gray)
+    ch_c, ch_id = normalize_charuco(ch_c, ch_id)
+    return ch_c, ch_id, mk_c, mk_id
 
 
 def summary() -> str:

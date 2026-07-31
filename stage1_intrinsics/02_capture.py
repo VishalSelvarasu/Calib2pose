@@ -1,31 +1,3 @@
-"""
-Capture calibration images from a laptop webcam.
-
-    python 02_capture.py
-    python 02_capture.py --cam 1 --width 1280 --height 720
-
-Why this is not just "grab 20 frames":
-
-  1. Autofocus is fatal. If the lens refocuses between shots, the focal length
-     changes, and the single intrinsic matrix you are solving for does not
-     exist. This script tries to lock focus and exposure, and tells you loudly
-     when the driver refuses.
-
-  2. Motion blur is fatal-ish. Rolling-shutter webcams smear corners. Frames
-     are rejected on a sharpness metric and on board stillness.
-
-  3. Pose coverage decides whether distortion is observable. Flat, centred,
-     frontal views leave k1/k2 underdetermined, and the reprojection error
-     will still look great. The on-screen grid and tilt buckets force you to
-     cover the image corners and to tilt the board.
-
-Controls:
-    SPACE  force-capture the current frame
-    A      toggle auto-capture (on by default)
-    U      undo last capture
-    Q/ESC  quit
-"""
-
 import argparse
 import json
 import os
@@ -39,14 +11,13 @@ import numpy as np
 
 import board_config as bc
 
-# ---- capture policy ---------------------------------------------------------
-MIN_CORNERS = 14          # reject views with too few interior corners
-MIN_SHARPNESS = 60.0      # variance of Laplacian over the board region
-STILL_PX = 1.2            # max mean corner motion (px) to count as "still"
-STILL_FRAMES = 3          # consecutive still frames required
-COOLDOWN_S = 1.0          # min seconds between auto-captures
-GRID = 3                  # 3x3 image zones
-PER_ZONE_TARGET = 2       # captures wanted per zone
+MIN_CORNERS = 14
+MIN_SHARPNESS = 60.0
+STILL_PX = 1.2
+STILL_FRAMES = 3
+COOLDOWN_S = 1.0
+GRID = 3
+PER_ZONE_TARGET = 2
 TILT_BINS = [(0, 12), (12, 25), (25, 40), (40, 90)]
 PER_TILT_TARGET = 4
 
@@ -54,8 +25,7 @@ PER_TILT_TARGET = 4
 def open_camera(index, width, height):
     """Open with the backend that actually lets you set properties."""
     if platform.system() == "Windows":
-        # Without CAP_DSHOW, Windows picks MSMF, where property setting
-        # frequently fails silently and startup takes seconds.
+
         cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
     elif platform.system() == "Linux":
         cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
@@ -68,8 +38,6 @@ def open_camera(index, width, height):
             f"Teams/Zoom/Camera app -- Windows gives exclusive access."
         )
 
-    # MJPG before resolution: many USB webcams only offer 720p/1080p under
-    # MJPG, and silently clamp to 640x480 under raw YUY2.
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -136,7 +104,8 @@ def approx_tilt_deg(obj_pts, img_pts, size):
     "frontal / moderate / steep", which is all it is used for.
     """
     w, h = size
-    K = np.array([[w, 0, w / 2.0], [0, w, h / 2.0], [0, 0, 1.0]], dtype=np.float64)
+    K = np.array([[w, 0, w / 2.0], [0, w, h / 2.0],
+                 [0, 0, 1.0]], dtype=np.float64)
     ok, rvec, _ = cv2.solvePnP(
         obj_pts, img_pts, K, None, flags=cv2.SOLVEPNP_IPPE
     )
@@ -274,7 +243,8 @@ def main():
         capture_now = False
 
         if n_corners >= 4:
-            cv2.aruco.drawDetectedCornersCharuco(vis, ch_c, ch_id, (0, 255, 255))
+            cv2.aruco.drawDetectedCornersCharuco(
+                vis, ch_c, ch_id, (0, 255, 255))
 
             state["sharp"] = sharpness(gray, ch_c)
 
@@ -282,7 +252,8 @@ def main():
             cur = {int(i): ch_c[k, 0] for k, i in enumerate(ch_id.flatten())}
             shared = set(cur) & set(prev_by_id)
             if shared:
-                d = np.mean([np.linalg.norm(cur[i] - prev_by_id[i]) for i in shared])
+                d = np.mean([np.linalg.norm(cur[i] - prev_by_id[i])
+                            for i in shared])
             else:
                 d = 999.0
             prev_by_id = cur
@@ -290,7 +261,8 @@ def main():
 
             obj_p, img_p = board.matchImagePoints(ch_c, ch_id)
             state["tilt"] = (
-                approx_tilt_deg(obj_p, img_p, size) if obj_p is not None and len(obj_p) >= 6 else 0.0
+                approx_tilt_deg(obj_p, img_p, size) if obj_p is not None and len(
+                    obj_p) >= 6 else 0.0
             )
             z = zone_of(ch_c, size)
             tb = tilt_bin(state["tilt"])
@@ -308,7 +280,8 @@ def main():
                     msg, col = "READY", (60, 220, 60)
                     capture_now = state["auto"]
                 else:
-                    msg, col = "zone+tilt already covered - move on", (180, 180, 180)
+                    msg, col = "zone+tilt already covered - move on", (180,
+                                                                       180, 180)
         else:
             prev_by_id, still_run = {}, 0
 
