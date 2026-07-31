@@ -1,6 +1,8 @@
 ## 2026-07-31
-- Stage 1 synthetic validation: fx err 0.10%, k1 err 0.0004, split-half 0.18%
-- Frontal-only control run reproduces the failure: RMS 0.2089 (lower!),
-  fx err 1.95%, k2 sign-flipped +0.627 vs true -0.226
-- Env: Python 3.14 venv, OpenCV 5.0.0 — shape change handled in bc.detect()
-- Next: print board (2 copies), measure square, set SQUARE_LENGTH_MM
+- Stages 1-3 shipped. Baseline ADD 1.40 mm, 100% pass (274 mm object, 0.5% of diameter)
+- Degenerate hand-eye propagates to 81.40 mm ADD, 0% pass, with every stage-3
+  signal still green — the project's central result
+- Env: Python 3.14, OpenCV 5.0 (calibrateHandEye removed, own solvers in stage 2)
+- Debt: board_config.py + transform helpers duplicated across 3 stages -> common/
+- Pending: real-webcam calibration (needs printed board)
+- Next: stage 4, synthetic keypoint training. 40-80 hrs. After the exam.
