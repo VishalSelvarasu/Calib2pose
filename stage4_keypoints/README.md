@@ -117,16 +117,91 @@ the projected aspect ratio. Roughly 10-15 % of views come out below 0.3, and
 they are correct labels that are simply poorly conditioned for PnP — legitimate
 hard examples, not errors.
 
+## Model
+
+ResNet-18 (ImageNet-pretrained) → three deconv blocks → 8 heatmaps.
+
+| space | size | holds |
+|---|---|---|
+| image | 640×640 | stored keypoints, stored `K` |
+| input | 256×256 | what the network sees |
+| heatmap | 64×64 | targets and predictions |
+
+Predictions are scaled back to image space before PnP, because the stored camera
+matrix describes image space. Scaling `K` instead would also work but leaves two
+`K`s in circulation.
+
+### Heatmaps, not coordinate regression
+
+Regressing (x, y) directly forces the network to encode position in the *values*
+of its final activations — a poor match for a convolutional trunk, which is
+translation-equivariant and naturally expresses "where" as "which unit fired".
+Heatmaps keep the representation spatial until the argmax.
+
+### Sub-pixel decoding
+
+The argmax alone quantises to whole heatmap pixels — 1 px at 64×64 is **10 px**
+in image space, which would dominate the pose error outright.
+
+The decoder fits a quadratic to the log of the three samples along each axis
+around the peak. For a gaussian the log is exactly a parabola, so on an ideal
+heatmap the fit is an exact inverse (round-trip error 0.000 px). Under noise it
+still roughly halves the error:
+
+| heatmap noise σ | argmax only | sub-pixel |
+|---|---|---|
+| 0.00 | 0.376 px | **0.000 px** |
+| 0.05 | 0.511 px | **0.254 px** |
+| 0.10 | 0.677 px | **0.453 px** |
+| 0.20 | 1.056 px | **0.827 px** |
+
+(heatmap pixels; multiply by 10 for image space)
+
+### Loss
+
+Masked MSE on sigmoid heatmaps with `pos_weight=8`. Over a 64×64 map the target
+is ~99 % zeros, so unweighted MSE lets the background dominate and the network
+converges to predicting nothing everywhere. Keypoints outside the heatmap get
+weight 0 rather than an all-zero target — forcing "no peak" on a corner that is
+merely off-frame teaches the network to suppress evidence it can legitimately
+see near the border.
+
+### Augmentation
+
+Photometric only: brightness, contrast, colour cast, sensor noise, defocus.
+
+Horizontal flip is deliberately **excluded**. A mirrored drill is a scene that
+cannot physically exist, and the keypoint permutation it would require does not
+correspond to any real rotation. Geometric augmentation is excluded for the same
+reason it would invalidate the stored pose, which evaluation depends on.
+
+## Training
+
+```bash
+python 04_train.py --epochs 60
+python 04_train.py --epochs 60 --resume     # keep --epochs identical
+python 04_train.py --epochs 2 --limit 200   # smoke test
+```
+
+Checkpoints every epoch to `checkpoints/last.pt`, and to `best.pt` on validation
+improvement. `--resume` restores model, optimiser, scheduler, epoch and best
+score, so a session can end anywhere.
+
+Validation tracks **mean keypoint error in image-space pixels**, not loss.
+Heatmap MSE is not comparable across runs and does not track what matters
+downstream; pixel error directly limits PnP accuracy.
+
+Keep `--epochs` constant across resumes — `CosineAnnealingLR` uses it as `T_max`,
+so changing it makes the learning rate jump. The script warns if you do.
+
+Expect roughly 45–90 s/epoch on an RTX 4060 laptop with `--workers 4`; JPEG
+decode, not the GPU, is the likely bottleneck.
+
 ## Status
 
 - [x] Keypoint definition, verified visually
 - [x] Renderer with domain randomization and occlusion labelling
 - [x] Chunked generation and stratified splits
-- [ ] Model: ResNet-18 backbone, deconv heatmap head
-- [ ] Training loop with per-epoch checkpointing
+- [x] Model: ResNet-18 backbone, deconv heatmap head, sub-pixel decoding
+- [x] Training loop with per-epoch checkpointing and resume
 - [ ] Inference → PnP → ADD, compared against the stage 3 baseline
-
-Heatmaps rather than direct coordinate regression: regression forces the network
-to encode spatial position in its final activations, while heatmaps stay spatial
-until the argmax and support subpixel refinement on the peak. PnP accuracy is
-directly limited by keypoint precision, so that subpixel step matters.

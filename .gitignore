@@ -1,11 +1,36 @@
-﻿.venv/
+@"
+# Python
+.venv/
+venv/
 __pycache__/
 *.pyc
-captures/
-synthetic/
-results/
-data/
-debug_data/
-assets/
+*.pyo
+
+# Model weights and checkpoints
 *.pt
 *.pth
+checkpoints/
+
+# Generated data (regenerates from scripts + seeds)
+data/
+debug_data/
+captures/
+synthetic/
+verify/
+
+# Downloaded assets (re-fetch with 00_fetch_assets.py)
+assets/
+*.msh
+
+# Cached mesh points for ADD
+drill_points.npy
+
+# Run outputs
+results/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+"@ | Set-Content .gitignore -Encoding UTF8
