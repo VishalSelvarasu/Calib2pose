@@ -1,8 +1,11 @@
-.venv/
+﻿.venv/
 __pycache__/
 *.pyc
 captures/
 synthetic/
 results/
-*.pt
+data/
+debug_data/
 assets/
+*.pt
+*.pth
