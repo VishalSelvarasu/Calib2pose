@@ -6,25 +6,59 @@ from torchvision.models import resnet18, ResNet18_Weights
 
 N_KP = 8
 INPUT_SIZE = 256
-HEATMAP_SIZE = 64
-SIGMA = 2.0          # gaussian std in heatmap pixels
+HEATMAP_SIZE = 64    # default; --heatmap 128 adds a fourth deconv
+SIGMA = 2.0          # gaussian std, in heatmap pixels, AT HEATMAP_SIZE=64
+
+
+def sigma_for(heatmap_size):
+    """Sigma must scale with heatmap resolution.
+
+    Sigma is expressed in heatmap pixels, so holding it fixed while doubling
+    the canvas shrinks the target's share of the image 4x: at 64 a sigma-2
+    gaussian covers 0.51 % of the map, at 128 only 0.13 %. The background term
+    in the loss then dominates 4x harder and the network collapses to
+    predicting zero everywhere -- observed directly as a run where confidence
+    never moved from its initialisation value of sigmoid(-2.19) = 0.10 and
+    pixel error stayed at 226 px for ten epochs.
+
+    Scaling sigma linearly keeps the target the same physical width in image
+    pixels (20 px either way) and the positive fraction roughly constant, while
+    still buying the finer grid that was the point of the higher resolution.
+    """
+    return SIGMA * (heatmap_size / 64.0)
+
+# Precision budget, which is why resolution is worth testing:
+#   at 64:  640/64 = 10 image px per heatmap px, sigma 2.0 = 20 image px
+#   at 128: 640/128 = 5 image px per heatmap px, sigma 2.0 = 10 image px
+# The first run measured 24.5 image px error = 2.45 heatmap px = 1.22 sigma.
+# If the network localises to a fixed fraction of sigma, doubling resolution
+# halves the error. If the limit is learning rather than representation, it
+# buys nothing. One run distinguishes these.
 
 
 class KeypointNet(nn.Module):
-    def __init__(self, n_kp=N_KP, pretrained=True):
+    def __init__(self, n_kp=N_KP, pretrained=True, heatmap_size=HEATMAP_SIZE):
         super().__init__()
         weights = ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
         backbone = resnet18(weights=weights)
         # drop avgpool and fc; keep the conv trunk
         self.backbone = nn.Sequential(*list(backbone.children())[:-2])
+        self.heatmap_size = heatmap_size
 
-        # 8x8 -> 16 -> 32 -> 64
+        # ResNet-18 at 256 input gives 8x8. Each deconv doubles.
+        if heatmap_size == 64:
+            chans = [(512, 256), (256, 256), (256, 256)]      # 8->16->32->64
+        elif heatmap_size == 128:
+            # Narrower late layers: a 128x128 map at 256 channels is ~1 GB of
+            # activations at batch 32, which does not fit comfortably in 8 GB.
+            chans = [(512, 256), (256, 256), (256, 128), (128, 128)]
+        else:
+            raise ValueError(
+                f"heatmap_size must be 64 or 128, got {heatmap_size}")
+
         self.deconv = nn.Sequential(
-            self._deconv_block(512, 256),
-            self._deconv_block(256, 256),
-            self._deconv_block(256, 256),
-        )
-        self.head = nn.Conv2d(256, n_kp, kernel_size=1)
+            *[self._deconv_block(a, b) for a, b in chans])
+        self.head = nn.Conv2d(chans[-1][1], n_kp, kernel_size=1)
 
         for m in self.deconv.modules():
             if isinstance(m, nn.ConvTranspose2d):
@@ -48,7 +82,7 @@ class KeypointNet(nn.Module):
         return self.head(self.deconv(self.backbone(x)))
 
 
-def make_target(kps_hm, size=HEATMAP_SIZE, sigma=SIGMA):
+def make_target(kps_hm, size=HEATMAP_SIZE, sigma=None):
     """Gaussian target heatmaps from keypoints already in heatmap coordinates.
 
     Returns (K, size, size) float32 and a (K,) weight mask. Keypoints outside
@@ -56,6 +90,7 @@ def make_target(kps_hm, size=HEATMAP_SIZE, sigma=SIGMA):
     all-zero target teaches the network to suppress evidence it may actually
     see near the border.
     """
+    sigma = sigma_for(size) if sigma is None else sigma
     k = len(kps_hm)
     target = np.zeros((k, size, size), np.float32)
     weight = np.ones(k, np.float32)

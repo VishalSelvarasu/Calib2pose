@@ -13,7 +13,7 @@ from model import KeypointNet, HeatmapLoss, decode_heatmaps, HEATMAP_SIZE
 CKPT_DIR = "checkpoints"
 
 
-def evaluate(model, loader, device, loss_fn, max_batches=None):
+def evaluate(model, loader, device, loss_fn, heatmap_size, max_batches=None):
     model.eval()
     losses, errs, confs = [], [], []
     with torch.no_grad():
@@ -27,7 +27,7 @@ def evaluate(model, loader, device, loss_fn, max_batches=None):
             losses.append(loss_fn(logits, tgt, wt).item())
 
             coords, conf = decode_heatmaps(logits)
-            pred_img = coords * (IMAGE_SIZE / HEATMAP_SIZE)
+            pred_img = coords * (IMAGE_SIZE / heatmap_size)
             gt = batch["kps_img"].numpy()
             w = wt.cpu().numpy()
             d = np.linalg.norm(pred_img - gt, axis=2)          # (B,K)
@@ -53,15 +53,30 @@ def main():
                     help="cap validation batches per epoch (0 = all)")
     ap.add_argument("--no-pretrained", action="store_true",
                     help="skip ImageNet weights (offline testing only -- costs accuracy)")
+    ap.add_argument("--heatmap", type=int, default=64, choices=[64, 128],
+                    help="heatmap resolution. 128 halves the quantisation but "
+                         "roughly doubles memory and epoch time.")
+    ap.add_argument("--aug", type=float, default=1.0,
+                    help="augmentation strength. 0 disables geometric and "
+                         "cutout, reproducing the first run.")
+    ap.add_argument("--patience", type=int, default=0,
+                    help="stop after N epochs with no val improvement (0 = off)")
+    ap.add_argument("--tag", default="",
+                    help="suffix for the checkpoint dir, to keep runs separate")
     args = ap.parse_args()
 
-    os.makedirs(CKPT_DIR, exist_ok=True)
+    ckpt_dir = CKPT_DIR + (f"_{args.tag}" if args.tag else "")
+    os.makedirs(ckpt_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"device: {device}"
           f"{' (' + torch.cuda.get_device_name(0) + ')' if device.type == 'cuda' else ''}")
 
-    train_ds = DrillKeypointDataset(args.data, "train", augment=True)
-    val_ds = DrillKeypointDataset(args.data, "val", augment=False)
+    train_ds = DrillKeypointDataset(args.data, "train", augment=args.aug > 0,
+                                    heatmap_size=args.heatmap,
+                                    aug_strength=args.aug)
+    val_ds = DrillKeypointDataset(args.data, "val", augment=False,
+                                  heatmap_size=args.heatmap)
+    print(f"heatmap {args.heatmap}  aug {args.aug}  ckpts -> {ckpt_dir}/")
     if args.limit:
         train_ds.records = train_ds.records[:args.limit]
         val_ds.records = val_ds.records[:max(args.limit // 4, 8)]
@@ -76,7 +91,8 @@ def main():
                         num_workers=args.workers, collate_fn=collate,
                         pin_memory=pin, persistent_workers=args.workers > 0)
 
-    model = KeypointNet(pretrained=not args.no_pretrained).to(device)
+    model = KeypointNet(pretrained=not args.no_pretrained,
+                        heatmap_size=args.heatmap).to(device)
     loss_fn = HeatmapLoss()
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     # T_max must match the FULL intended run length. Resuming with a different
@@ -84,9 +100,9 @@ def main():
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
 
-    start_epoch, best = 0, float("inf")
+    start_epoch, best, stale = 0, float("inf"), 0
     hist = []
-    last_path = os.path.join(CKPT_DIR, "last.pt")
+    last_path = os.path.join(ckpt_dir, "last.pt")
     if args.resume and os.path.exists(last_path):
         ck = torch.load(last_path, map_location=device, weights_only=False)
         model.load_state_dict(ck["model"])
@@ -124,6 +140,7 @@ def main():
         sched.step()
 
         vl, vmean, vmed, vconf = evaluate(model, val_ld, device, loss_fn,
+                                          args.heatmap,
                                           args.val_batches or None)
         dt = time.time() - t0
         print(f"epoch {epoch:3d}  train {np.mean(running):.5f}  val {vl:.5f}  "
@@ -140,17 +157,25 @@ def main():
         improved = vmean < best
         if improved:
             best = vmean
+            stale = 0
+        else:
+            stale += 1
 
         state = {"model": model.state_dict(), "opt": opt.state_dict(),
                  "sched": sched.state_dict(), "epoch": epoch, "best": best,
                  "hist": hist, "args": vars(args)}
         torch.save(state, last_path)
         if improved:
-            torch.save(state, os.path.join(CKPT_DIR, "best.pt"))
+            torch.save(state, os.path.join(ckpt_dir, "best.pt"))
             print(f"  -> new best {best:.3f} px")
 
-        with open(os.path.join(CKPT_DIR, "history.json"), "w") as f:
+        with open(os.path.join(ckpt_dir, "history.json"), "w") as f:
             json.dump(hist, f, indent=2)
+
+        if args.patience and stale >= args.patience:
+            print(f"\nno val improvement for {stale} epochs -- stopping early "
+                  f"at epoch {epoch}")
+            break
 
     print(f"\ndone. best val keypoint error {best:.3f} px (image space, 640)")
 

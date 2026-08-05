@@ -77,19 +77,24 @@ def main():
                          "idea of what is 'accurate'. At 24.5 px keypoint noise "
                          "a 12 px threshold rejects good points and fails to "
                          "solve; 1.5-2x the noise works.")
+    ap.add_argument("--heatmap", type=int, default=None, choices=[64, 128],
+                    help="defaults to whatever the checkpoint was trained with")
     ap.add_argument("--out", default="results")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ck = torch.load(args.ckpt, map_location=device, weights_only=False)
-    model = KeypointNet(pretrained=False).to(device)
+    hs = args.heatmap or ck.get("args", {}).get("heatmap", 64)
+    model = KeypointNet(pretrained=False, heatmap_size=hs).to(device)
     model.load_state_dict(ck["model"])
     model.eval()
     print(
         f"loaded {args.ckpt} (epoch {ck['epoch']}, val {ck.get('best', 0):.2f} px)")
 
-    ds = DrillKeypointDataset(args.data, args.split, augment=False)
+    ds = DrillKeypointDataset(args.data, args.split, augment=False,
+                              heatmap_size=hs)
+    print(f"heatmap resolution {hs}")
     ld = DataLoader(ds, batch_size=args.batch, shuffle=False,
                     num_workers=args.workers, collate_fn=collate)
     print(f"{args.split}: {len(ds)} images")
@@ -103,7 +108,7 @@ def main():
         for batch in ld:
             logits = model(batch["image"].to(device))
             coords, conf = decode_heatmaps(logits)
-            pred_img = coords * (IMAGE_SIZE / HEATMAP_SIZE)
+            pred_img = coords * (IMAGE_SIZE / hs)
             gt_img = batch["kps_img"].numpy()
             weight = batch["weight"].numpy()
 
@@ -243,7 +248,11 @@ def main():
         "pnp_solved": int(ok.sum()),
         "rows": rows,
     }
-    path = os.path.join(args.out, f"eval_{args.split}.json")
+    tag = os.path.basename(os.path.dirname(args.ckpt)).replace(
+        "checkpoints", "") or "base"
+    suffix = "_ransac" if args.ransac else ""
+    path = os.path.join(
+        args.out, f"eval_{args.split}_{tag.strip('_')}{suffix}.json")
     with open(path, "w") as f:
         json.dump(out, f, indent=2, default=float)
     print(f"\nwrote {path}")

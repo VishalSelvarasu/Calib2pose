@@ -14,12 +14,15 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225], np.float32)
 
 
 class DrillKeypointDataset(Dataset):
-    def __init__(self, data_dir, split, augment=False):
+    def __init__(self, data_dir, split, augment=False, heatmap_size=HEATMAP_SIZE,
+                 aug_strength=1.0):
         with open(os.path.join(data_dir, f"{split}.json")) as f:
             self.records = json.load(f)["records"]
         self.img_dir = os.path.join(data_dir, "images")
         self.augment = augment
         self.split = split
+        self.heatmap_size = heatmap_size
+        self.aug_strength = aug_strength
 
     def __len__(self):
         return len(self.records)
@@ -33,16 +36,21 @@ class DrillKeypointDataset(Dataset):
         img = cv2.resize(img, (INPUT_SIZE, INPUT_SIZE),
                          interpolation=cv2.INTER_AREA)
 
+        kps_img = np.array(r["keypoints"], np.float32)          # 640 space
+        kps_in = kps_img * (INPUT_SIZE / IMAGE_SIZE)            # 256 space
+
         if self.augment:
+            img, kps_in = self._affine(img, kps_in)
             img = self._photometric(img)
+            img = self._cutout(img)
 
         x = img.astype(np.float32) / 255.0
         x = (x - IMAGENET_MEAN) / IMAGENET_STD
         x = torch.from_numpy(x.transpose(2, 0, 1))
 
-        kps_img = np.array(r["keypoints"], np.float32)          # 640 space
-        kps_hm = kps_img * (HEATMAP_SIZE / IMAGE_SIZE)          # 64 space
-        target, weight = make_target(kps_hm)
+        kps_img = kps_in * (IMAGE_SIZE / INPUT_SIZE)            # back to 640
+        kps_hm = kps_in * (self.heatmap_size / INPUT_SIZE)
+        target, weight = make_target(kps_hm, size=self.heatmap_size)
 
         return {
             "image": x,
@@ -51,6 +59,41 @@ class DrillKeypointDataset(Dataset):
             "kps_img": torch.from_numpy(kps_img),
             "idx": i,
         }
+
+    def _affine(self, img, kps):
+        """Scale, translate and in-plane rotate. Keypoints transform with the
+        image, so the correspondence stays exact."""
+        s = self.aug_strength
+        rng = np.random
+        angle = rng.uniform(-25, 25) * s
+        scale = 1.0 + rng.uniform(-0.25, 0.25) * s
+        tx = rng.uniform(-0.10, 0.10) * s * INPUT_SIZE
+        ty = rng.uniform(-0.10, 0.10) * s * INPUT_SIZE
+
+        c = INPUT_SIZE / 2.0
+        M = cv2.getRotationMatrix2D((c, c), angle, scale)
+        M[0, 2] += tx
+        M[1, 2] += ty
+        out = cv2.warpAffine(img, M, (INPUT_SIZE, INPUT_SIZE),
+                             flags=cv2.INTER_LINEAR,
+                             borderMode=cv2.BORDER_REPLICATE)
+        kps_h = np.hstack([kps, np.ones((len(kps), 1), np.float32)])
+        return out, (kps_h @ M.T).astype(np.float32)
+
+    def _cutout(self, img):
+        """Random occluding rectangles. Heavily occluded views were the worst
+        performing group in the first evaluation, and the renderer's distractor
+        objects alone did not produce enough of them."""
+        rng = np.random
+        n = rng.randint(0, int(3 * self.aug_strength) + 1)
+        out = img.copy()
+        for _ in range(n):
+            w = rng.randint(INPUT_SIZE // 12, INPUT_SIZE // 3)
+            h = rng.randint(INPUT_SIZE // 12, INPUT_SIZE // 3)
+            x0 = rng.randint(0, INPUT_SIZE - w)
+            y0 = rng.randint(0, INPUT_SIZE - h)
+            out[y0:y0 + h, x0:x0 + w] = rng.randint(0, 256, 3)
+        return out
 
     def _photometric(self, img):
         rng = np.random
