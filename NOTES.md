@@ -7,20 +7,21 @@
 - Pending: real-webcam calibration (needs printed board)
 - Next: stage 4, synthetic keypoint training. 40-80 hrs. After the exam.
 
-## 2026-08-05
-- Stage 4 trained: 60 epochs, best val 32.95 px keypoint error (epoch 33)
-- Overfit hard: val loss min at epoch 13 (0.00735), train/val ratio 72x by end.
-  px error flat 33-35 from epoch 13 on, so best.pt is arbitrary within noise.
-- Eval on test (1000): ADD 34.79 mm mean, 19.43 median, 64.0% ADD-0.1d pass
-  vs stage 3 marker baseline 1.40 mm / 100%
-- DIAGNOSIS: precision-limited, not identity-limited. 24.5 px of 33.8 px is
-  localisation; only 9.3 px from corner swaps (14.5% swap rate).
-  -> semantic keypoints would attack the SMALL term. Not indicated.
-- RANSAC (40 px thr): 64.1% pass, mean ADD 36.31 mm. NO improvement.
-  Simulation predicted 83% — it assumed swaps were clean exchanges of
-  well-localised points. Real swapped points are also imprecise, so they are
-  not separable outliers against a 24.5 px noise floor.
-- Occlusion dominates: clean 80%, light 61%, heavy 23% pass
-- View geometry does NOT matter: aspect bands 63.4/60.8/66.4% — flat
-- Next: retrain with stronger augmentation + early stop ~epoch 15.
-  Generalisation is the problem, not architecture or PnP.
+## 2026-08-04
+- common/ added: transforms, metrics, bbox keypoint definition (8 AABB corners,
+  mean spread 171.7 mm, ordering = x/y/z min-max product). Verified visually.
+- Renderer built: domain randomization, 0-4 YCB distractors, occlusion labelled
+  per image via segmentation pass. 10k images @ 640, split 8k/1k/1k stratified.
+- Two label bugs caught by LOOKING at debug images, invisible in statistics:
+  (a) MIN_VISIBLE_FRAC is a ratio -- a distant drill 60% occluded passed at a
+      few hundred px. Added MIN_VISIBLE_PX = 6000 absolute floor.
+  (b) frame margin was +-40 px, letting corners float into empty space.
+      Tightened to 15 px, max 2 corners outside.
+- Also: occlusion was measured on one distractor arrangement then the objects
+  were re-randomised before the real render, so every visible_frac described a
+  different image. Fixed by storing and restoring the measured poses.
+- 03_verify_labels.py checks containment (mesh projects inside box hull) -- a
+  hard invariant. But it compares manifest against manifest and never opens the
+  image, so it CANNOT catch a swapped image file. A mistyped --start-idx 600
+  silently corrupted ~100 images while every check still passed.
+- Stages 2/3 keep their own transform copies; not migrating working code.
