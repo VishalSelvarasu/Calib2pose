@@ -10,9 +10,21 @@ own residual.
 | [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known mount | done |
 | [3. 6D pose, ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100 % ADD-0.1d | done |
 | [4. 6D pose, learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 93.7 % ADD-0.1d | done |
-| 5. Closed loop with UR5e | — | not started |
+| [5. Closed loop with UR5e](stage5_closed_loop/) | 84 % grasp success at 15 mm tolerance | done |
 
 Python, OpenCV, MuJoCo, PyTorch. Runs on Windows; no ROS or Linux required.
+
+![qualitative results](stage4_keypoints/results/qualitative_mesh.png)
+
+Test images from stage 4. **Green** is the ground-truth 3D bounding box,
+**orange** is the box recovered from the network's predicted keypoints via
+`solvePnP`, **magenta** dots are the drill's mesh vertices. `visible` is the
+fraction of the drill not hidden by other objects, measured by a segmentation
+pass.
+
+Accuracy is governed by visibility, not by pose: the nine fully-visible tiles
+span 0.5–14.2 mm across widely different orientations, while both failures are
+occluded, at 62 % and 42 %.
 
 ## Why ground truth
 
@@ -50,16 +62,21 @@ resolution changed nothing. Data augmentation and a longer schedule — the two
 least interesting options — cut the error 3.1x and took the pass rate from 64 %
 to 93.7 %.
 
+**Stage 5 — the benchmark metric is more permissive than the gripper.** ADD-0.1d
+passes at 0.1 × object diameter, 27.4 mm for this drill. Sweeping the tolerance
+over the same trials: 95.6 % at 27.4 mm, 84.0 % at 15 mm (a parallel-jaw margin),
+41.4 % at 5 mm. Same model, same poses, same errors — only the question changed.
+
 ## Markers vs markerless
 
 Stage 4 replaces stage 3's ArUco markers with a learned keypoint detector,
 feeding the same `solvePnP` call so the comparison isolates the perception
 front end.
 
-| | mean ADD | ADD-0.1d pass | rotation |
-|---|---|---|---|
-| markers (stage 3) | 1.40 mm | 100 % | 0.39° |
-| learned keypoints (stage 4) | 11.21 mm | 93.7 % | 3.36° |
+| | mean ADD | ADD-0.1d pass | rotation | grasp success @ 15 mm |
+|---|---|---|---|---|
+| markers (stage 3) | 1.40 mm | 100 % | 0.39° | 100 % |
+| learned keypoints (stage 4) | 11.21 mm | 93.7 % | 3.36° | 84 % |
 
 An 8x accuracy cost to remove the requirement that someone stick fiducials on the
 object. Under clean visibility the learned pipeline reaches 6.73 mm at a 99.1 %

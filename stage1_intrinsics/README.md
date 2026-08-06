@@ -17,7 +17,8 @@ calibrates twice:
    blur, sensor noise and MJPG compression. Ground truth is known, so the
    output is a real error in pixels.
 2. **Real**, on a printed board and a laptop webcam, using the identical
-   detect-and-solve path.
+   detect-and-solve path. *(Pending — the synthetic result below stands on its
+   own; the real capture adds hardware validation, not accuracy.)*
 
 ## Result: reprojection error is a misleading metric
 
@@ -34,7 +35,6 @@ distribution of board poses differs.
 | k2 (truth −0.226) | −0.2147 | **+0.6267** |
 | split-half fx agreement | 0.18 % | 3.12 % |
 
-
 The frontal-only set has the *lower* RMS and is comprehensively wrong — k2 does
 not merely drift, it changes sign. Anyone selecting on reprojection error alone
 would ship the worse calibration.
@@ -49,6 +49,23 @@ Reproduce both:
 python 00_synthetic_test.py --n 30
 python 00_synthetic_test.py --n 30 --frontal-only
 ```
+
+## What the calibration actually does
+
+![undistorted](results/undistorted.png)
+
+Left: a rendered view with barrel distortion applied through the known
+coefficients. Right: the same view undistorted using the coefficients the
+solver recovered. Straight lines come out straight — the visual counterpart of
+the 0.10 % fx error in the table.
+
+![corner coverage](results/coverage.png)
+
+Where the detected ChArUco corners landed across all 30 views, with a count per
+image zone. Distortion is only observable where corners fall, so a sparse zone
+means the distortion model is extrapolating there rather than fitting. This plot
+is what the capture HUD is trying to fill in during real capture, and it is why
+the frontal-only run above fails: all its corners land in the middle.
 
 ## Webcam-specific handling
 
@@ -75,6 +92,24 @@ requested before resolution (many webcams silently clamp to 640×480 under raw
 YUY2), `DICT_5X5_100` for Hamming margin on a soft sensor, loosened ArUco
 bit-error thresholds for MJPG ringing, and `k3` fixed at zero by default since
 it is poorly conditioned at this field of view and trades against `k1`.
+
+## OpenCV 4.x / 5.x compatibility
+
+OpenCV 5.0 removed the vestigial middle axis from ChArUco detector output:
+
+| | corners | ids |
+|---|---|---|
+| 4.x | `(N,1,2)` | `(N,1)` |
+| 5.0 | `(N,2)` | `(N,)` |
+
+Code using `.reshape(-1,2)` is unaffected. Code indexing `corners[k, 0]` is not,
+and fails in the worse way: under 5.0 it returns a bare x coordinate instead of
+a point, so the caller keeps running on wrong numbers rather than raising.
+`board_config.detect()` normalises at the detection boundary so the rest of the
+code is version-agnostic.
+
+Verified end-to-end on OpenCV 4.13.0 and 5.0.0, identical results to within
+solver noise.
 
 ## Usage
 
@@ -107,5 +142,3 @@ metres, so it is worth getting right now.
 
 Outputs land in `results/`: `intrinsics.json`, `coverage.png`,
 `undistorted.png`.
-
-Tested on OpenCV 4.13.

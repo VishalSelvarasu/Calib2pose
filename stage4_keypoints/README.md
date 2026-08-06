@@ -8,42 +8,57 @@ same `solvePnP` call, so the pose stage is unchanged and the comparison is clean
 
 Test split, 1000 images, never touched during training or tuning.
 
-| run | change | epochs | keypoint err | mean ADD | ADD-0.1d pass |
-|---|---|---|---|---|---|
-| 1 | photometric aug, heatmap 64 | 60 | 33.78 px | 34.79 mm | 64.0 % |
-| 2 | + affine + cutout | 40 | 14.13 px | 14.33 mm | 88.7 % |
-| 3 | as run 2, heatmap 128 | 40 | 15.19 px | 15.26 mm | 87.8 % |
-| 4 | **as run 2, longer schedule** | **100** | **10.78 px** | **11.21 mm** | **93.7 %** |
-| — | stage 3, ArUco markers | — | ~0.5 px | 1.40 mm | 100 % |
+| run | change | keypoint err | mean ADD | ADD-0.1d pass |
+|---|---|---|---|---|
+| 1 | photometric aug, heatmap 64 | 33.78 px | 34.79 mm | 64.0 % |
+| 2 | **+ affine + cutout** | **14.13 px** | **14.33 mm** | **88.7 %** |
+| 3 | as run 2, heatmap 128 | 15.19 px | 15.26 mm | 87.8 % |
+| — | stage 3, ArUco markers | ~0.5 px | 1.40 mm | 100 % |
 
-Two changes account for everything, and neither touches the architecture:
+Augmentation cut keypoint error **2.4x** and took the pass rate from 64 % to
+88.7 %. The train/val loss ratio went from 72x to 0.95x — the overfitting was
+eliminated, not merely reduced.
 
-**Augmentation** (run 1 → 2) cut keypoint error 2.4x and took the pass rate from
-64 % to 88.7 %. The train/val loss ratio went from 72x to 0.95x — the overfitting
-was eliminated, not merely reduced.
+Doubling heatmap resolution changed nothing (87.8 % vs 88.7 %) at 33 % more
+compute per epoch.
 
-**Schedule length** (run 2 → 4) cut it a further 1.3x to 93.7 %. Run 2's
-validation loss was still falling monotonically at epoch 39 and early stopping
-never fired, so the 40-epoch budget was the binding constraint rather than the
-model. Run 4 genuinely converged: validation loss flat at 0.00196–0.00198 across
-the final ten epochs.
-
-**Heatmap resolution** (run 2 → 3) changed nothing, at 33 % more compute.
-
-The final train/val ratio is 0.90 — validation loss sits *below* training loss,
-which is expected when augmentation applies only to the training split, and
-confirms no overfitting even at 100 epochs.
-
-Run 4 by occlusion:
+Run 2 by occlusion:
 
 | occlusion | n | ADD | pass | keypoint err |
 |---|---|---|---|---|
-| clean >95 % | 558 | 6.73 mm | 99.1 % | 7.07 px |
-| light 70–95 % | 235 | 11.46 mm | 94.5 % | 11.17 px |
-| heavy <70 % | 205 | 23.07 mm | 78.0 % | 20.45 px |
+| clean >95 % | 558 | 9.08 mm | 97.7 % | 9.58 px |
+| light 70–95 % | 235 | 15.26 mm | 86.8 % | 14.85 px |
+| heavy <70 % | 205 | 27.59 mm | 66.3 % | 25.73 px |
 
-Heavy occlusion went from 22.9 % (run 1) to 78.0 % — the largest single gain, and
+Heavy occlusion went from 22.9 % to 66.3 % pass — the largest single gain, and
 what cutout augmentation was chosen to target.
+
+![qualitative results](results/qualitative_mesh.png)
+
+Twelve test images, evenly spaced across the ADD distribution of a random
+300-image sample from the held-out test split — best case, worst case, and ten
+evenly spaced between. Not the best twelve; the last tile is a 119.5 mm failure
+and is in there deliberately.
+
+**Green** is the ground-truth 3D bounding box. **Orange** is the box recovered
+from the network's predicted keypoints via `solvePnP`. **Magenta** dots are the
+drill's mesh vertices, drawn through the ground-truth pose.
+
+The box is much larger than the visible drill because the drill is L-shaped —
+body plus handle at right angles — and its axis-aligned bounding box is 57 x 183
+x 196 mm, mostly empty. The magenta points trace the actual geometry.
+Containment is verified on 300 images at 100.0 %.
+
+Reading the grid: the nine tiles at 100 % visibility span 0.5–14.2 mm despite
+widely different orientations, distances and backgrounds. Both failures are
+occluded, at 62 % and 42 %. Orientation and viewpoint do not predict error;
+occlusion does.
+
+![training curves](results/training_curves.png)
+
+Run 1's validation loss turns upward at epoch 13 while training loss keeps
+falling a further 20x — the overfitting is visible at a glance in a way
+"train/val ratio 72x" is not. Run 4 tracks to epoch 100 without separating.
 
 ## What the measurements overturned
 
@@ -64,12 +79,10 @@ nearest ground-truth keypoint; if it is not the intended one, that is a swap.
 |---|---|---|---|
 | 1 | 24.5 px | 9.3 px | 14.5 % |
 | 2 | 13.2 px | 1.0 px | 3.3 % |
-| 4 | 10.3 px | 0.5 px | 2.0 % |
 
 Identity was always the minor term, and better localisation dissolved most of it
-as a side effect — the swap rate fell 7x without any change to the keypoint
-definition. Switching to semantic keypoints would have attacked the small term
-and left the large one untouched.
+as a side effect. Switching keypoint definitions would have attacked the small
+term and left the large one untouched.
 
 ### 2. RANSAC does not help
 
@@ -96,9 +109,8 @@ At 64×64 each heatmap pixel is 10 image pixels, so quantisation looked like a
 plausible precision floor. Doubling to 128×128 gave 15.19 px against 14.13 px —
 no benefit, slightly worse, 33 % slower.
 
-Run 1's 24.5 px was a *learning* limit, not a representational one. Run 4 later
-reached 10.78 px at the original 64×64 resolution, well past where quantisation
-was supposed to bind, which settles it.
+Run 1's 24.5 px was a *learning* limit, not a representational one, and
+augmentation was the entire fix.
 
 **The first attempt at this ablation collapsed, and that was a bug of mine.**
 Training at 128 with sigma left at 2.0 never learned: loss moved from 0.00505 to
@@ -125,16 +137,13 @@ Occlusion dominates; view geometry does not.
 
 | projected box aspect | n | ADD | pass |
 |---|---|---|---|
-| edge-on <0.35 | 101 | 14.28 mm | 93.1 % |
-| oblique 0.35–0.6 | 352 | 10.37 mm | 95.2 % |
-| broad >0.6 | 547 | 11.17 mm | 92.9 % |
+| edge-on <0.35 | 101 | 15.51 mm | 90.1 % |
+| oblique 0.35–0.6 | 352 | 13.31 mm | 90.3 % |
+| broad >0.6 | 547 | 14.76 mm | 87.4 % |
 
-Flat within noise, in every run. The near edge-on views flagged during label
-verification are correct labels and are not harder in practice — which retires
-the PnP-conditioning concern entirely.
-
-Occlusion, by contrast, spans 6.73 mm to 23.07 mm and 99.1 % to 78.0 % in the
-same run. It is the only difficulty axis that matters.
+Flat within noise, in both run 1 and run 2. The near edge-on views flagged during
+label verification are correct labels and are not harder in practice — which
+retires the PnP-conditioning concern entirely.
 
 ## Keypoints
 
@@ -303,14 +312,9 @@ stored pose and `K` stay valid for PnP.
 ## Training
 
 ```bash
-# run 4, the best configuration
-python 04_train.py --epochs 100 --patience 15 --aug 1.0 --tag aug100
-
-# ablations
 python 04_train.py --epochs 40 --patience 8 --aug 1.0 --tag aug
 python 04_train.py --epochs 40 --patience 8 --aug 1.0 --heatmap 128 --batch 16 --tag aug128
-
-python 04_train.py --epochs 100 --aug 1.0 --tag aug100 --resume   # keep --epochs identical
+python 04_train.py --epochs 40 --aug 1.0 --tag aug --resume    # keep --epochs identical
 ```
 
 Checkpoints every epoch to `checkpoints_<tag>/last.pt`, and to `best.pt` on
@@ -324,17 +328,31 @@ downstream; pixel error directly limits PnP accuracy.
 Keep `--epochs` constant across resumes — `CosineAnnealingLR` uses it as `T_max`,
 so changing it makes the learning rate jump. The script warns if you do.
 
-Roughly 25–45 s/epoch at heatmap 64 on an RTX 4060 laptop with `--workers 4`,
-60 s at 128. Run 4 is about 45 minutes end to end.
+Roughly 45 s/epoch at heatmap 64 on an RTX 4060 laptop with `--workers 4`, 60 s
+at 128.
 
 ## Evaluation
 
 ```bash
-python 05_evaluate.py --ckpt checkpoints_aug100/best.pt
+python 05_evaluate.py --ckpt checkpoints_aug/best.pt
 ```
 
 Reads the heatmap size from the checkpoint. Reports ADD, the localisation/identity
 split, and breakdowns by occlusion and projected box aspect.
+
+Figures:
+
+```bash
+python 06_qualitative.py --ckpt checkpoints_aug100/best.pt --mesh \
+    --out results/qualitative_mesh.png
+python 07_plot_training.py
+```
+
+`06_qualitative.py` samples its pool **randomly**, never as `records[:N]`:
+`02_build_dataset.py` assembles each split by iterating occlusion buckets, so
+the file is ordered by occlusion and a sequential read lands entirely inside the
+hardest bucket. The first version of this figure did exactly that and understated
+the model. `02_build_dataset.py` now shuffles after stratifying.
 
 ## Status
 
@@ -346,10 +364,6 @@ split, and breakdowns by occlusion and projected box aspect.
 - [x] Inference → PnP → ADD against the stage 3 baseline
 - [x] Augmentation ablation — 2.4x improvement
 - [x] Heatmap resolution ablation — no benefit
-- [x] Longer schedule — a further 1.3x, converged at 93.7 %
-
-Every lever with evidence behind it has now been pulled. Remaining ideas, none
-currently indicated by the measurements: a two-stage detect-then-crop pipeline
-to raise effective resolution on the object, more training data, or a keypoint
-set with local visual evidence — though the identity term is now 0.5 px, so the
-last of those has almost nothing left to win.
+- [ ] Longer schedule: run 2's validation loss was still falling monotonically at
+      epoch 39 and patience never fired, so the 40-epoch budget was the binding
+      constraint rather than the model
