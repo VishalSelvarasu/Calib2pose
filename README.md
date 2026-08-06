@@ -12,8 +12,6 @@ own residual.
 | [4. 6D pose, learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 93.7 % ADD-0.1d | done |
 | [5. Closed loop with UR5e](stage5_closed_loop/) | 84 % grasp success at 15 mm tolerance | done |
 
-Python, OpenCV, MuJoCo, PyTorch. Runs on Windows; no ROS or Linux required.
-
 ![qualitative results](stage4_keypoints/results/qualitative_mesh.png)
 
 Test images from stage 4. **Green** is the ground-truth 3D bounding box,
