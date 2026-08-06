@@ -1,3 +1,4 @@
+
 import argparse
 import glob
 import json
@@ -61,8 +62,16 @@ def main():
         test_idx.extend(idx[:n_t])
         val_idx.extend(idx[n_t:n_t + n_v])
 
+    # Shuffle after stratifying. The loop above appends bucket by bucket, so
+    # without this the written file is ORDERED BY OCCLUSION -- and anything that
+    # reads it sequentially (a figure script taking the first N, a quick
+    # sanity-check on a subset) silently samples only the hardest images.
+    rng.shuffle(test_idx)
+    rng.shuffle(val_idx)
+
     test_set, val_set = set(test_idx), set(val_idx)
     train_idx = [i for i in range(n) if i not in test_set and i not in val_set]
+    rng.shuffle(train_idx)
 
     splits = {"train": train_idx, "val": val_idx, "test": test_idx}
     print(f"\ntotal {n} images")

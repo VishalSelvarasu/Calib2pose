@@ -1,0 +1,1415 @@
+{
+  "source": "perfect",
+  "trials": 200,
+  "grasp_tol_mm": 15.0,
+  "placement_mean_mm": 0.0,
+  "placement_median_mm": 0.0,
+  "placement_p90_mm": 0.0,
+  "placement_max_mm": 0.0,
+  "ik_residual_mean_mm": 0.03683104685368142,
+  "ik_converged_pct": 100.0,
+  "grasp_success_pct": 100.0,
+  "observation_visibility": 0.2857568359375,
+  "rows": [
+    {
+      "trial": 0,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 1,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 2,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 3,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 4,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 5,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 6,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 7,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 8,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 9,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 10,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 11,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 12,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 13,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 14,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 15,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 16,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 17,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 18,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 19,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 20,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 21,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 22,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 23,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 24,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 25,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 26,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 27,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 28,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 29,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 30,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 31,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 32,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 33,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 34,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 35,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 36,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 37,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 38,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 39,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 40,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 41,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 42,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 43,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 44,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 45,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 46,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 47,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 48,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 49,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 50,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 51,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 52,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 53,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 54,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 55,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 56,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 57,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 58,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 59,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 60,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 61,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 62,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 63,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 64,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 65,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 66,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 67,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 68,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 69,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 70,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 71,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 72,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 73,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 74,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 75,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 76,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 77,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 78,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 79,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 80,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 81,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 82,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 83,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 84,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 85,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 86,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 87,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 88,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 89,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 90,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 91,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 92,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 93,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 94,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 95,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 96,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 97,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 98,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 99,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 100,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 101,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 102,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 103,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 104,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 105,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 106,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 107,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 108,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 109,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 110,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 111,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 112,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 113,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 114,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 115,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 116,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 117,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 118,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 119,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 120,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 121,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 122,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 123,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 124,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 125,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 126,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 127,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 128,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 129,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 130,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 131,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 132,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 133,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 134,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 135,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 136,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 137,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 138,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 139,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 140,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 141,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 142,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 143,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 144,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 145,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 146,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 147,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 148,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 149,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 150,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 151,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 152,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 153,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 154,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 155,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 156,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 157,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 158,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 159,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 160,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 161,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 162,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 163,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 164,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 165,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 166,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 167,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 168,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 169,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 170,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 171,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 172,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 173,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 174,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 175,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 176,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 177,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 178,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 179,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 180,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 181,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 182,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 183,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 184,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 185,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 186,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 187,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 188,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 189,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 190,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 191,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 192,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 193,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 194,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 195,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 196,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 197,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 198,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    },
+    {
+      "trial": 199,
+      "ik_converged": true,
+      "ik_residual_mm": 0.036831046853681416,
+      "placement_mm": 0.0,
+      "placement_deg": 2.9575586669421963e-06
+    }
+  ]
+}
