@@ -1,144 +1,164 @@
-# Stage 1 — Camera Intrinsic Calibration, Validated Against Ground Truth
+# Stage 1 — Camera Intrinsic Calibration
 
-ChArUco-based intrinsic calibration for a consumer laptop webcam, with a
-synthetic ground-truth harness that makes the calibration error *measurable*
-rather than merely plausible.
+This stage calibrates camera intrinsics with a ChArUco board. I built a synthetic
+version first so I could compare the recovered parameters with known ground
+truth before relying on the same pipeline with a real webcam.
 
-Stage 1 of a 5-stage 6D pose estimation project
-(intrinsics → hand-eye → PnP pose → learned keypoints → closed loop).
+It is the first stage of the full pipeline:
 
-## The point
+`intrinsics → hand-eye calibration → PnP pose → learned keypoints → robot-level evaluation`
 
-On real hardware the true intrinsics are unknown, so a low reprojection error
-is unfalsifiable — it is a residual, not an error. This repo therefore
-calibrates twice:
+## Why I started with a synthetic calibration
 
-1. **Synthetic**, through a known `K` and known distortion, with webcam-like
-   blur, sensor noise and MJPG compression. Ground truth is known, so the
-   output is a real error in pixels.
-2. **Real**, on a printed board and a laptop webcam, using the identical
-   detect-and-solve path. *(Pending — the synthetic result below stands on its
-   own; the real capture adds hardware validation, not accuracy.)*
+With a real camera, I can measure reprojection error, but I do not know the true
+focal length or distortion coefficients well enough to say how far the estimate
+is from the physical camera. A synthetic camera gives me both: the usual
+reprojection residual and the actual parameter error.
 
-## Result: reprojection error is a misleading metric
+The stage therefore supports two paths:
 
-Two runs, 30 synthetic views each, identical renderer and solver. Only the
-distribution of board poses differs.
+1. **Synthetic validation** using a known camera matrix and distortion model,
+   with blur, noise, and MJPG-like compression added to make the images less
+   idealised.
+2. **Real capture** using the same ChArUco detector and calibration code on a
+   printed board and laptop webcam. This hardware run is still pending.
 
-| | good pose spread | frontal-only |
-|---|---|---|
+## Main experiment: pose coverage matters more than the lowest RMS
+
+I rendered two 30-view datasets with the same camera and solver. The only change
+was the distribution of board poses.
+
+| Metric | Good pose spread | Frontal-only |
+|---|---:|---:|
 | RMS reprojection | 0.2494 px | **0.2089 px** |
-| fx error vs truth | **0.10 %** | 1.95 % |
-| fy error vs truth | 0.01 % | 1.89 % |
-| cy error vs truth | 0.15 % | 1.75 % |
-| k1 (truth +0.115) | +0.1146 | +0.0919 |
-| k2 (truth −0.226) | −0.2147 | **+0.6267** |
-| split-half fx agreement | 0.18 % | 3.12 % |
+| `fx` error vs truth | **0.10%** | 1.95% |
+| `fy` error vs truth | 0.01% | 1.89% |
+| `cy` error vs truth | 0.15% | 1.75% |
+| `k1` (truth +0.115) | +0.1146 | +0.0919 |
+| `k2` (truth −0.226) | −0.2147 | **+0.6267** |
+| Split-half `fx` agreement | 0.18% | 3.12% |
 
-The frontal-only set has the *lower* RMS and is comprehensively wrong — k2 does
-not merely drift, it changes sign. Anyone selecting on reprojection error alone
-would ship the worse calibration.
+The frontal-only dataset has the lower reprojection error, but its recovered
+intrinsics are clearly worse. `k2` even changes sign.
 
-The split-half check catches it: fit the even-indexed views and the
-odd-indexed views independently and compare. Stable intrinsics agree to well
-under 1 %. Underdetermined ones do not.
+For me, this was the first useful result in the project: reprojection error is a
+fit residual, not a guarantee that the parameters are well constrained.
 
-Reproduce both:
+I added a simple split-half stability check for that reason. The even-numbered
+views and odd-numbered views are calibrated independently and the recovered
+intrinsics are compared. The well-covered dataset agrees closely; the
+frontal-only dataset does not.
+
+You can reproduce the comparison with:
 
 ```bash
 python 00_synthetic_test.py --n 30
 python 00_synthetic_test.py --n 30 --frontal-only
 ```
 
-## What the calibration actually does
+## What the calibration is doing visually
 
-![undistorted](results/undistorted.png)
+![Undistorted comparison](results/undistorted.png)
 
-Left: a rendered view with barrel distortion applied through the known
-coefficients. Right: the same view undistorted using the coefficients the
-solver recovered. Straight lines come out straight — the visual counterpart of
-the 0.10 % fx error in the table.
+The left image is rendered with the known distortion coefficients. The right
+image is undistorted using the coefficients recovered by calibration. This is a
+useful visual check alongside the numerical error against ground truth.
 
-![corner coverage](results/coverage.png)
+![Corner coverage](results/coverage.png)
 
-Where the detected ChArUco corners landed across all 30 views, with a count per
-image zone. Distortion is only observable where corners fall, so a sparse zone
-means the distortion model is extrapolating there rather than fitting. This plot
-is what the capture HUD is trying to fill in during real capture, and it is why
-the frontal-only run above fails: all its corners land in the middle.
+The coverage plot shows where ChArUco corners were observed across all views.
+Distortion parameters are constrained by observations across the image, so
+central-only coverage leaves the model extrapolating near the edges. The real
+capture tool uses the same idea in its coverage HUD.
 
-## Webcam-specific handling
+## Handling a consumer webcam
 
-Laptop webcams break three assumptions that machine-vision cameras satisfy:
+A laptop webcam is less controlled than a machine-vision camera, so the capture
+script tries to handle a few practical problems explicitly.
 
-**Autofocus.** If the lens refocuses between frames, the focal length changes
-and the single `K` being solved for does not exist. `02_capture.py` locks
-autofocus, auto-exposure and auto white balance, then *reads every property
-back* — `cap.set()` returns `True` even when the driver ignored it. When the
-lock fails it says so and tells you to hold a constant working distance.
+## Autofocus and automatic camera controls
 
-**Motion blur.** Frames are rejected on sharpness (variance of Laplacian,
-measured inside the board's bounding box only — whole-frame sharpness is
-carried by background clutter) and on stillness (mean corner displacement
-between frames, matched by corner ID).
+If the webcam changes focus between frames, the effective focal length changes
+and there is no single fixed intrinsic matrix that exactly describes the whole
+capture. `02_capture.py` therefore attempts to lock autofocus, exposure, and
+white balance.
 
-**Pose coverage.** Distortion is only observable where corners land. The
-capture HUD tracks a 3×3 image-zone grid and four tilt buckets and auto-captures
-only into cells that still need samples, which is what prevents the failure
-mode in the table above.
+The script also reads the properties back after setting them. Some webcam
+drivers report success from `cap.set()` even when the requested value was not
+actually applied.
 
-Other choices: `CAP_DSHOW` on Windows (MSMF ignores property sets), MJPG
-requested before resolution (many webcams silently clamp to 640×480 under raw
-YUY2), `DICT_5X5_100` for Hamming margin on a soft sensor, loosened ArUco
-bit-error thresholds for MJPG ringing, and `k3` fixed at zero by default since
-it is poorly conditioned at this field of view and trades against `k1`.
+## Motion blur
 
-## OpenCV 4.x / 5.x compatibility
+Candidate frames are checked for both sharpness and stillness. Sharpness is
+measured with the variance of the Laplacian inside the detected board region,
+rather than over the whole frame, so background texture does not hide a blurry
+board. Stillness is estimated from the motion of matched ChArUco corner IDs.
 
-OpenCV 5.0 removed the vestigial middle axis from ChArUco detector output:
+## Pose and image coverage
 
-| | corners | ids |
+The capture HUD tracks a 3×3 image grid and several board-tilt buckets. Automatic
+capture prefers regions that still need samples instead of collecting many
+nearly identical frontal views.
+
+A few other webcam-specific choices are also built in:
+
+- `CAP_DSHOW` is preferred on Windows because MSMF can ignore some property sets.
+- MJPG is requested before the resolution, since some webcams otherwise fall
+  back to lower resolutions under raw YUY2.
+- `DICT_5X5_100` gives a little more Hamming margin on a soft/compressed image.
+- ArUco bit-error thresholds are slightly relaxed for MJPG ringing.
+- `k3` is fixed to zero by default because it is poorly constrained in this
+  setup and can trade off against the lower-order radial terms.
+
+## OpenCV 4.x and 5.x compatibility
+
+OpenCV changed the shape of the ChArUco detector output between 4.x and 5.x:
+
+| Version | Corners | IDs |
 |---|---|---|
-| 4.x | `(N,1,2)` | `(N,1)` |
-| 5.0 | `(N,2)` | `(N,)` |
+| OpenCV 4.x | `(N,1,2)` | `(N,1)` |
+| OpenCV 5.x | `(N,2)` | `(N,)` |
 
-Code using `.reshape(-1,2)` is unaffected. Code indexing `corners[k, 0]` is not,
-and fails in the worse way: under 5.0 it returns a bare x coordinate instead of
-a point, so the caller keeps running on wrong numbers rather than raising.
-`board_config.detect()` normalises at the detection boundary so the rest of the
-code is version-agnostic.
+Code that immediately reshapes corners with `.reshape(-1, 2)` is fine, while
+code that assumes `corners[k, 0]` is a 2D point can silently behave incorrectly
+under OpenCV 5. `board_config.detect()` normalises the shapes at the detector
+boundary so the rest of the stage does not depend on the OpenCV version.
 
-Verified end-to-end on OpenCV 4.13.0 and 5.0.0, identical results to within
-solver noise.
+I checked the full synthetic calibration on OpenCV 4.13.0 and 5.0.0 and obtained
+matching results within normal solver variation.
 
-## Usage
+## Running the stage
 
 ```bash
 pip install -r requirements.txt
 
-python 00_synthetic_test.py      # validate the pipeline first
-python 01_generate_board.py      # -> board/charuco_A4.pdf, print at 100%
-python 02_capture.py             # SPACE capture, A auto, U undo, Q quit
+python 00_synthetic_test.py
+python 01_generate_board.py
+python 02_capture.py
 python 03_calibrate.py
 ```
 
-After printing: verify the 100 mm ruler printed on the page, tape the board
-flat to something rigid, measure a square, and set `SQUARE_LENGTH_MM` in
-`board_config.py`.
+`02_capture.py` uses:
 
-Board scale does **not** affect intrinsics — it enters only the extrinsic
-translation. It does affect stage 2 hand-eye, which solves for a translation in
-metres, so it is worth getting right now.
+- `SPACE` — capture
+- `A` — automatic capture
+- `U` — undo
+- `Q` — quit
 
-## Files
+After printing the board, verify the 100 mm ruler on the page, mount the paper
+flat on something rigid, measure a square, and update `SQUARE_LENGTH_MM` in
+`board_config.py` if needed.
 
-| | |
-|---|---|
-| `board_config.py` | single source of truth for board geometry + detector tuning |
-| `00_synthetic_test.py` | render from known `K`, calibrate, report error vs truth |
-| `01_generate_board.py` | print-exact A4 PDF with a 100 mm verification ruler |
-| `02_capture.py` | webcam capture with focus lock, blur rejection, coverage HUD |
-| `03_calibrate.py` | solve, per-view errors, outlier refit, split-half check |
+Board scale does not change the estimated intrinsic matrix. It does change the
+scale of the recovered extrinsic translations, which matters in Stage 2, so it
+is still worth measuring correctly.
 
-Outputs land in `results/`: `intrinsics.json`, `coverage.png`,
-`undistorted.png`.
+## Current status
+
+- [x] Synthetic rendering with known camera intrinsics
+- [x] Good-coverage vs frontal-only calibration comparison
+- [x] Split-half stability check
+- [x] OpenCV 4.x / 5.x detector-shape handling
+- [x] Webcam capture safeguards for focus, blur, and pose coverage
+- [ ] Real webcam calibration run
+- [ ] Repeatability check across multiple real capture sessions

@@ -1,126 +1,139 @@
-# Stage 3 — 6D Object Pose, Scored with ADD
+# Stage 3 — 6D Object Pose with ArUco Markers
 
-Estimates the 6D pose of the YCB power drill in robot base coordinates by
-chaining everything the project has built:
+This stage estimates the 6D pose of the YCB power drill in the robot base frame.
+It is where the intrinsic calibration, hand-eye transform, and image-based PnP
+estimate are combined into one transform chain:
 
-```
+```text
 T_base_drill = T_base_flange @ T_flange_cam @ T_cam_drill
-               ^ forward kin    ^ stage 2      ^ solvePnP, here
+               robot pose        Stage 2       solvePnP here
 ```
 
-Scored with **ADD** — the mean distance between the object's 8945 model points
-transformed by the estimated pose versus the true pose. A pose counts as correct
-at ADD < 0.1 × object diameter. The drill's diameter is 274.0 mm, so the
-threshold is 27.4 mm.
+The marker-based result is also the high-accuracy baseline for the learned
+markerless system in Stage 4.
 
-The drill is asymmetric, so plain ADD applies. A symmetric object would require
-ADD-S, which matches each point to its nearest neighbour instead.
+## Evaluation metric
+
+I use **ADD** (Average Distance of Model Points). The drill mesh contains 8,945
+points. For each test pose, the points are transformed once with the estimated
+pose and once with the known ground-truth pose, and the mean 3D distance is
+reported.
+
+The drill diameter is approximately 274.0 mm, so ADD-0.1d uses a threshold of
+27.4 mm. Because the drill is asymmetric, standard ADD is appropriate; a
+symmetric object would require a symmetry-aware metric such as ADD-S.
 
 ## Results
 
-30 camera poses on a dome above the object, 28 with enough markers visible:
+I evaluated 30 camera poses on a dome above the object. Twenty-eight views had
+enough visible marker corners for PnP.
 
-| run | mean ADD | median | worst | ADD-0.1d pass |
-|---|---|---|---|---|
-| true hand-eye, no noise | 1.40 mm | 1.15 mm | 3.64 mm | 100 % |
-| stage 2 hand-eye (0.591 mm error), no noise | 1.55 mm | 1.29 mm | 3.92 mm | 100 % |
-| true hand-eye, 0.5 px corner noise | 1.66 mm | 1.47 mm | 4.23 mm | 100 % |
-| **stage 2 degenerate hand-eye (81 mm error)** | **81.40 mm** | 81.37 mm | 84.07 mm | **0 %** |
+| Run | Mean ADD | Median | Worst | ADD-0.1d pass |
+|---|---:|---:|---:|---:|
+| True hand-eye, no noise | 1.40 mm | 1.15 mm | 3.64 mm | 100% |
+| Stage 2 hand-eye (0.591 mm error), no noise | 1.55 mm | 1.29 mm | 3.92 mm | 100% |
+| True hand-eye, 0.5 px corner noise | 1.66 mm | 1.47 mm | 4.23 mm | 100% |
+| **Degenerate Stage 2 hand-eye (~81 mm error)** | **81.40 mm** | **81.37 mm** | **84.07 mm** | **0%** |
 
-Baseline run: mean reprojection 0.533 px, mean rotation error 0.390°.
-1.40 mm on a 274 mm object is 0.5 % of diameter.
+For the baseline run, mean reprojection error is 0.533 px and mean rotation
+error is 0.390°. A 1.40 mm ADD on a 274 mm object is about 0.5% of the object
+diameter.
 
-## Error sources are not remotely equal
+## What the error comparison shows
 
-Measured against the baseline, each source costs:
+Relative to the 1.40 mm baseline:
 
-| source | added ADD |
-|---|---|
-| 0.5 px corner detection noise | +0.26 mm |
-| stage 2 hand-eye error of 0.591 mm | +0.15 mm |
-| stage 2 degenerate hand-eye | **+80.00 mm** |
+| Source | Added mean ADD |
+|---|---:|
+| 0.5 px corner noise | +0.26 mm |
+| 0.591 mm Stage 2 hand-eye error | +0.15 mm |
+| Degenerate Stage 2 hand-eye | **+80.00 mm** |
 
-The two sources with visible local symptoms are negligible. The one that
-dominates has no local symptom at all.
+The deliberately bad hand-eye transform dominates everything else.
 
-## Upstream error propagates, and only translation shows it
+More importantly, that upstream error is almost invisible if Stage 3 is judged
+only by its own local signals:
 
-The last row of both tables is the point of the whole project. Stage 2's
-degenerate run recovered rotation to 0.053° and x/y to a fraction of a
-millimetre, failing only in the mathematically unobservable z axis — by 81 mm.
-
-Feed that transform into stage 3 and the pose error is 81.40 mm at a 0 % pass
-rate, while stage 3's own quality signals stay green:
-
-| signal | baseline | with degenerate hand-eye |
-|---|---|---|
-| reprojection | 0.533 px | 0.533 px |
-| rotation error | 0.390° | 0.385° |
-| markers detected/view | 2.86 | 2.86 |
+| Signal | Baseline | Degenerate hand-eye |
+|---|---:|---:|
+| Reprojection | 0.533 px | 0.533 px |
+| Rotation error | 0.390° | 0.385° |
+| Markers detected / view | 2.86 | 2.86 |
 | **ADD** | **1.40 mm** | **81.40 mm** |
 
-Nothing measurable inside stage 3 indicates a problem. The images look right,
-the markers detect cleanly, the solver converges, the residual is small. The
-drill is simply 81 mm from where the robot thinks it is.
+The image measurements and PnP solve have not become worse. The coordinate
+system used to place the answer in the robot base frame is wrong. This is the
+example that convinced me not to treat a local residual as an end-to-end
+validation metric.
 
-This is why every stage in this project is validated against a known answer
-rather than against its own residual.
+## A geometry bug I found while building the marker rig
 
-## The plate offset bug
+The marker plates are MJCF boxes. In MuJoCo, the `pos` of a box is its centre,
+but the marker texture is painted on the +Z face. My first implementation built
+the marker 3D corners on the centre plane instead of the visible face.
 
-Found during development, fixed in the shipped code. Recorded because the
-failure signature is worth knowing.
+That small offset produced an error that changed with plate tilt:
 
-Markers are painted on the +Z **face** of each plate, but `pos` in MJCF is the
-**centre** of the box. Building the marker's 3D corners at the centre plane
-instead of the face left an error that rotated with the plate:
-
-| plate | tilt | reprojection before | after |
-|---|---|---|---|
+| Plate | Tilt | Reprojection before | After |
+|---|---:|---:|---:|
 | 0 | 0° | 0.68 px | 0.60 px |
 | 1 | 40° | 1.91 px | 0.80 px |
 | 2 | 40° | 3.38 px | 0.65 px |
 
-Overall pose error fell from 7.91 mm to 1.14 mm on the test view. The signature
-was a *uniform* shift of all four corners on the tilted plates — which reads
-like a camera calibration problem rather than a geometry one, and is why it was
-caught by reprojecting known 3D points through the *true* pose rather than by
-looking at the solver's residual.
+On the test view, the overall pose error dropped from 7.91 mm to 1.14 mm after
+fixing the marker plane.
+
+The useful part of this bug was the failure pattern: all four corners on a
+slanted plate shifted together. That can easily look like a camera-calibration
+issue. Reprojecting known 3D points using the **true** pose made it clear that the
+plate geometry, not PnP, was wrong.
 
 ## Marker layout
 
-Three 50 mm plates carrying 40 mm markers, angled rather than mounted flat on
-the object's faces:
+The drill carries three 50 mm plates with 40 mm ArUco markers:
 
-| id | position in drill frame | tilt |
+| ID | Position in drill frame | Orientation |
 |---|---|---|
-| 0 | (0, 0, 115) mm | flat, +Z |
-| 1 | (50, 0, 92) mm | 40° toward +X |
-| 2 | (0, −78, 92) mm | 40° toward −Y |
+| 0 | `(0, 0, 115)` mm | Flat, +Z |
+| 1 | `(50, 0, 92)` mm | 40° toward +X |
+| 2 | `(0, -78, 92)` mm | 40° toward −Y |
 
-Flat-on-the-faces was the first attempt: only the top marker was ever visible,
-and a single planar marker gives an ill-conditioned PnP. Angling the plates
-means at least two are oblique-but-visible from anywhere above, which keeps the
-point set non-planar. 24 of 28 usable views see all three markers.
+I first tried mounting markers directly on flat object faces. From many overhead
+views only the top marker was usable, which leaves PnP with a mostly planar
+configuration. Angling the plates keeps multiple marker planes visible from a
+wider range of camera poses. In the final test, 24 of the 28 usable views see all
+three markers.
 
-## Usage
+## Running the stage
 
 ```bash
 pip install -r requirements.txt
-python 01_pose_markers.py                       # true hand-eye
-python 01_pose_markers.py --handeye estimated   # stage 2's solved transform
+
+python 01_pose_markers.py
+python 01_pose_markers.py --handeye estimated
 python 01_pose_markers.py --noise-px 0.5
 python 01_pose_markers.py --handeye estimated \
     --handeye-json ../stage2_handeye/results/handeye_degenerate.json
 ```
 
-`--handeye estimated` requires stage 2 to have been run first.
+`--handeye estimated` expects the Stage 2 result file to exist.
 
-The YCB drill mesh (~22 MB) downloads automatically on first run from the
-`vikashplus/YCB_sim` MuJoCo port, Apache 2.0. `assets/` is gitignored.
+The YCB drill mesh is downloaded automatically on first use from the
+`vikashplus/YCB_sim` MuJoCo port (Apache 2.0). The downloaded `assets/` directory
+is gitignored.
 
-## Next
+## What comes next
 
-Stage 4 removes the markers: train a keypoint detector on synthetic renders and
-feed its output to the same `solvePnP` call. **1.40 mm mean ADD at a 100 % pass
-rate is the baseline it has to beat.**
+Stage 4 removes the markers and predicts eight 2D object keypoints from the
+image. The predicted keypoints are passed to the same PnP stage, so this
+1.40 mm marker result serves as the accuracy baseline for the markerless system.
+
+## Current status
+
+- [x] ArUco-based multi-plane pose estimation
+- [x] PnP evaluation against known ground truth
+- [x] ADD / ADD-0.1d evaluation
+- [x] Stage 2 hand-eye error propagation test
+- [x] Marker geometry debugging and corrected plate offsets
+- [x] Markerless comparison baseline for Stage 4
+- [ ] Real-camera fiducial baseline

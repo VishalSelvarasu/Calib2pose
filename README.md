@@ -1,101 +1,157 @@
 # calib2pose
 
-Camera calibration → hand-eye calibration → 6D object pose estimation for a
-robot arm. Every stage is validated against a **known** answer, not against its
-own residual.
+`calib2pose` is an end-to-end study of the geometry behind robot vision: camera
+intrinsics, hand-eye calibration, 6D object pose estimation, learned keypoints,
+and the effect of perception error on a robot task.
 
-| Stage | Result | Status |
+The main idea is simple: I do not want to judge a stage only by the residual it
+produces. Wherever possible, I first run it in simulation, where the true
+transform is known, and measure the result directly in millimetres and degrees.
+That makes it possible to catch failures that would otherwise look perfectly
+reasonable from inside the estimator.
+
+## Project at a glance
+
+| Stage | Main result | Status |
 |---|---|---|
-| [1. Camera intrinsics (ChArUco)](stage1_intrinsics/) | fx recovered to 0.10 % of ground truth | synthetic done, real capture pending |
-| [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known mount | done |
-| [3. 6D pose, ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100 % ADD-0.1d | done |
-| [4. 6D pose, learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 93.7 % ADD-0.1d | done |
-| [5. Closed loop with UR5e](stage5_closed_loop/) | 84 % grasp success at 15 mm tolerance | done |
+| [1. Camera intrinsics (ChArUco)](stage1_intrinsics/) | `fx` recovered within 0.10% of ground truth | Synthetic validation complete; real capture pending |
+| [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known camera mount | Simulation complete |
+| [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d | Simulation complete |
+| [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 93.7% ADD-0.1d | Synthetic evaluation complete |
+| [5. Task-level UR5e evaluation](stage5_closed_loop/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
 
-![qualitative results](stage4_keypoints/results/qualitative_mesh.png)
+![Qualitative Stage 4 results](stage4_keypoints/results/qualitative_mesh.png)
 
-Test images from stage 4. **Green** is the ground-truth 3D bounding box,
-**orange** is the box recovered from the network's predicted keypoints via
-`solvePnP`, **magenta** dots are the drill's mesh vertices. `visible` is the
-fraction of the drill not hidden by other objects, measured by a segmentation
-pass.
+The figure above shows held-out Stage 4 test images. **Green** is the true 3D
+bounding box, **orange** is the box recovered from the network predictions after
+`solvePnP`, and **magenta** shows projected mesh vertices. `visible` is the
+fraction of the drill that remains visible after occlusion.
 
-Accuracy is governed by visibility, not by pose: the nine fully-visible tiles
-span 0.5–14.2 mm across widely different orientations, while both failures are
-occluded, at 62 % and 42 %.
+The clearest pattern in this experiment was visibility. Fully visible examples
+can be accurate across very different viewpoints, while the largest errors are
+concentrated in heavily occluded cases.
 
-## Why ground truth
+## Why I built the project around ground truth
 
-On real hardware the true intrinsics, the true camera-to-flange transform, and
-the true object pose are all unknown. A low residual is therefore not an error
-measurement — it is unfalsifiable. Every stage here runs first in simulation,
-where the transform was chosen and the answer is known, so the output is an
-error in millimetres and degrees.
+On real hardware, the true camera intrinsics, camera-to-flange transform, and
+object pose are usually unknown. That means a small solver residual is useful,
+but it is not the same thing as knowing the estimate is physically correct.
 
-That discipline repeatedly overturned conclusions that looked solid:
+Using simulation first gave me a way to separate those two ideas. Several of the
+most useful results in the project came from cases where the local metric looked
+good but the known ground truth showed that something was wrong.
 
-**Stage 1 — the metric preferred the broken calibration.** A deliberately bad
-pose set produced a *lower* reprojection error (0.209 px vs 0.249 px) while
-getting fx wrong by 1.95 % and estimating k2 at +0.627 against a true −0.226 —
-wrong sign, nearly triple the magnitude. Selecting on reprojection error alone
-ships the worse calibration.
+## Stage 1: lower reprojection error did not mean better calibration
 
-**Stage 2 — an 81 mm error with a 0.05° residual.** Hand-eye calibration needs
-the relative motions to rotate about at least two axes. Given yaw-only motion,
-the solver recovered rotation to 0.053° and x/y to a fraction of a millimetre,
-and returned z as exactly 0.000 against a true 81 mm — least squares supplies the
-minimum-norm solution for an unobservable component, silently.
+I compared a well-distributed ChArUco pose set with a deliberately poor,
+mostly-frontal pose set. The frontal set achieved a lower RMS reprojection error
+(0.209 px vs 0.249 px), but its estimated `fx` was off by 1.95% and `k2` changed
+sign relative to the ground truth.
 
-**Stage 3 — and that error propagates invisibly.** Feeding the degenerate
-transform into the pose stage gives 81.40 mm ADD at a 0 % pass rate, while every
-signal available *inside* that stage stays green: reprojection 0.533 px, rotation
-error 0.385°, markers detected normally. Nothing local indicates a problem. The
-drill is simply 81 mm from where the robot thinks it is.
+That experiment is a good reminder that reprojection error measures how well the
+chosen model explains the observations. It does not, by itself, tell us whether
+the calibration parameters are well constrained.
 
-**Stage 4 — four hypotheses, two refuted.** The predicted failure mode for
-bounding-box keypoints was corner-identity confusion; measurement showed identity
-was 9.3 px of a 33.8 px error and localisation was 24.5 px. RANSAC, which should
-have filtered the swaps, changed the pass rate by 0.1 %. Doubling heatmap
-resolution changed nothing. Data augmentation and a longer schedule — the two
-least interesting options — cut the error 3.1x and took the pass rate from 64 %
-to 93.7 %.
+## Stage 2: a hand-eye result can look excellent while one direction is unobservable
 
-**Stage 5 — the benchmark metric is more permissive than the gripper.** ADD-0.1d
-passes at 0.1 × object diameter, 27.4 mm for this drill. Sweeping the tolerance
-over the same trials: 95.6 % at 27.4 mm, 84.0 % at 15 mm (a parallel-jaw margin),
-41.4 % at 5 mm. Same model, same poses, same errors — only the question changed.
+With a well-spread set of robot motions, the custom hand-eye solvers recover the
+known camera mount to about 0.6 mm and 0.08°.
 
-## Markers vs markerless
+I also tested a yaw-only motion set. In that case the translation along the shared
+rotation axis is not observable. The solver still returned a rotation error of
+only 0.053°, while the missing translation component was wrong by 81 mm.
 
-Stage 4 replaces stage 3's ArUco markers with a learned keypoint detector,
-feeding the same `solvePnP` call so the comparison isolates the perception
-front end.
+That failure motivated an explicit motion-diversity check before solving.
 
-| | mean ADD | ADD-0.1d pass | rotation | grasp success @ 15 mm |
-|---|---|---|---|---|
-| markers (stage 3) | 1.40 mm | 100 % | 0.39° | 100 % |
-| learned keypoints (stage 4) | 11.21 mm | 93.7 % | 3.36° | 84 % |
+## Stage 3: the upstream error propagates without changing the local PnP residual
 
-An 8x accuracy cost to remove the requirement that someone stick fiducials on the
-object. Under clean visibility the learned pipeline reaches 6.73 mm at a 99.1 %
-pass rate; heavy occlusion is where it degrades, to 78.0 %.
+When the degenerate Stage 2 transform is passed into Stage 3, the final object
+pose error becomes 81.40 mm ADD with a 0% ADD-0.1d pass rate.
 
-## Object
+What makes this result interesting is that the Stage 3 measurements still look
+normal: reprojection error stays at 0.533 px, the markers are detected, and the
+rotation estimate remains close to the baseline. The problem is in the upstream
+coordinate transform, so the local pose solver has no way to expose it.
 
-The YCB power drill (035), 274.0 mm diameter. Chosen because it is asymmetric —
-so plain ADD applies rather than ADD-S — and because it is a benchmark-standard
-object, which makes the numbers comparable to published work.
+## Stage 4: several reasonable hypotheses were wrong
 
-Poses are scored with **ADD**: the mean distance between the object's 8945 model
-points transformed by the estimated pose versus the true pose. A pose counts as
-correct at ADD < 0.1 × diameter, here 27.4 mm.
+The first learned-keypoint model produced 33.78 px mean keypoint error and a
+64.0% ADD-0.1d pass rate. I initially suspected corner-identity swaps and
+heatmap quantisation.
 
-## Notes
+The measurements pointed somewhere else. Most of the error came from
+localisation rather than identity, RANSAC barely changed the result, and doubling
+the heatmap resolution did not help. Stronger augmentation and a longer training
+schedule did: the final model reached 10.78 px keypoint error, 11.21 mm mean ADD,
+and 93.7% ADD-0.1d.
 
-`stage2_handeye/handeye_solvers.py` implements Tsai-Lenz, Park-Martin and
-Andreff directly in numpy, because OpenCV 5.0 removed `cv2.calibrateHandEye`
-from the Python bindings. They were validated against OpenCV 4.13's
-implementation during development.
+## Stage 5: benchmark tolerance and task tolerance are not the same thing
 
-Each stage folder has its own README with the full method and results.
-`NOTES.md` is the working log.
+For this drill, ADD-0.1d corresponds to a 27.4 mm threshold. In the UR5e
+simulation I propagated the measured Stage 4 error distribution through a fixed
+grasp-pose function and inverse kinematics.
+
+On the same set of trials, 95.6% landed within 27.4 mm, while 84.8% landed within
+15 mm and only 41.4% landed within 5 mm. The perception result has not changed;
+only the tolerance associated with the downstream task has changed.
+
+This is not yet a physical grasping experiment or a live perception-in-the-loop
+controller. It is a task-level error propagation study, which is the next step
+between pose metrics and real robot trials.
+
+## Markers vs markerless pose
+
+Stage 4 replaces the Stage 3 ArUco observations with learned image keypoints but
+keeps the same PnP-based pose recovery. That gives a reasonably clean comparison
+between the two perception front ends.
+
+| Method | Mean ADD | ADD-0.1d pass | Mean rotation error | Within 15 mm in Stage 5 |
+|---|---:|---:|---:|---:|
+| Markers (Stage 3) | 1.40 mm | 100% | 0.39° | 100% |
+| Learned keypoints (Stage 4) | 11.21 mm | 93.7% | 3.36° | 84.8% |
+
+The markerless system gives up roughly an order of magnitude in pose accuracy in
+exchange for removing the need to attach fiducials to the object. On clean test
+images it performs much better: 6.75 mm mean ADD and a 99.1% pass rate. Heavy
+occlusion is the main failure mode, where the pass rate drops to about 78%.
+
+## Object and metric
+
+The experiments use the YCB power drill (`035_power_drill`). Its diameter is
+approximately 274.0 mm. I chose it because it is asymmetric, so standard ADD can
+be used without the symmetry handling required by ADD-S.
+
+ADD is the mean distance between model points transformed by the estimated pose
+and the same points transformed by the ground-truth pose. The model contains
+8,945 points in this project. ADD-0.1d counts a pose as correct when its ADD is
+below 10% of the object diameter, or about 27.4 mm for the drill.
+
+The use of a YCB object and a standard pose metric makes the evaluation easier to
+relate to the 6D-pose literature, although the synthetic dataset and evaluation
+protocol here should not be treated as directly equivalent to a standard
+real-image benchmark such as YCB-Video.
+
+## Current limitations
+
+The main quantitative results are still simulation or synthetic-domain results.
+The project therefore demonstrates the pipeline, the validation methodology, and
+the observed failure modes, but it does not yet demonstrate sim-to-real
+performance on a physical robot.
+
+The most important next steps are:
+
+- Run the Stage 1 calibration on the real webcam.
+- Perform the hand-eye and marker baseline on real hardware.
+- Evaluate the learned model on real images.
+- Feed the actual per-image SE(3) prediction errors into the robot experiment.
+- Measure physical grasp success rather than only placement tolerance.
+
+## A note on the hand-eye solvers
+
+`stage2_handeye/handeye_solvers.py` contains NumPy implementations of Tsai-Lenz,
+Park-Martin, and Andreff hand-eye calibration. I added them because OpenCV 5.0
+no longer exposes `cv2.calibrateHandEye` in the Python bindings. The
+implementations were cross-checked against OpenCV 4.13 during development.
+
+Each stage has its own README with the method, experiments, and the failures I
+ran into while building it. `NOTES.md` is the shorter working log.

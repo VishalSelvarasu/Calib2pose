@@ -1,369 +1,182 @@
-# Stage 4 — Markerless Pose from Learned Keypoints
+# Stage 5 — Task-Level Error Propagation with a UR5e
 
-Replaces the ArUco markers of stage 3 with a network that predicts the drill's
-8 bounding-box corners directly from the image. The predicted keypoints feed the
-same `solvePnP` call, so the pose stage is unchanged and the comparison is clean.
+Stages 1–4 measure pose error in millimetres and degrees. In this stage I ask a
+more practical question: **if the robot uses an imperfect object pose, how far
+from the intended grasp pose does the flange end up?**
+
+The simulated chain is:
+
+```text
+estimated T_base_drill → fixed grasp-pose rule → IK → joint configuration → FK flange pose
+```
+
+The main metric is **placement error**: the distance between the flange pose
+reached from the estimated object pose and the flange pose reached from the true
+object pose.
+
+This stage is a task-level propagation experiment. It is not yet a full live
+closed-loop system: the Stage 4 network does not render and infer a new image
+inside each UR5e trial, and the gripper does not close on the object with contact
+dynamics. The experiment isolates how the measured perception error affects a
+downstream robot target.
 
 ## Results
 
-Test split, 1000 images, never touched during training or tuning.
+The stored Stage 5 result files contain 200 trials for the perfect and Stage 3
+sources and 500 trials for Stage 4. A trial is counted as within tolerance when
+the placement error is below 15 mm.
 
-| run | change | keypoint err | mean ADD | ADD-0.1d pass |
-|---|---|---|---|---|
-| 1 | photometric aug, heatmap 64 | 33.78 px | 34.79 mm | 64.0 % |
-| 2 | **+ affine + cutout** | **14.13 px** | **14.33 mm** | **88.7 %** |
-| 3 | as run 2, heatmap 128 | 15.19 px | 15.26 mm | 87.8 % |
-| — | stage 3, ArUco markers | ~0.5 px | 1.40 mm | 100 % |
+| Pose source | Mean | Median | p90 | Max | Within 15 mm |
+|---|---:|---:|---:|---:|---:|
+| Perfect pose (IK only) | 0.00 mm | 0.00 mm | 0.00 mm | 0.00 mm | 100% |
+| Stage 3 markers | 1.23 mm | 1.03 mm | 2.15 mm | 3.38 mm | **100%** |
+| Stage 4 learned keypoints | 9.63 mm | 6.15 mm | 18.57 mm | 116.11 mm | **84.8%** |
 
-Augmentation cut keypoint error **2.4x** and took the pass rate from 64 % to
-88.7 %. The train/val loss ratio went from 72x to 0.95x — the overfitting was
-eliminated, not merely reduced.
+The mean IK residual is about **0.04 mm**, which is much smaller than the
+perception-induced placement errors. For this setup, the kinematic solver is not
+the main source of error.
 
-Doubling heatmap resolution changed nothing (87.8 % vs 88.7 %) at 33 % more
-compute per epoch.
+The Stage 3 distribution should be interpreted with some caution. Its source
+pose file contains only 28 evaluated object poses, so resampling those errors 200
+times does not provide much information about the true tail of a marker-based
+system.
 
-Run 2 by occlusion:
+## The task tolerance changes the conclusion
 
-| occlusion | n | ADD | pass | keypoint err |
-|---|---|---|---|---|
-| clean >95 % | 558 | 9.08 mm | 97.7 % | 9.58 px |
-| light 70–95 % | 235 | 15.26 mm | 86.8 % | 14.85 px |
-| heavy <70 % | 205 | 27.59 mm | 66.3 % | 25.73 px |
+ADD-0.1d uses 10% of the object diameter as its success threshold. The drill is
+about 274 mm across, so that threshold is 27.4 mm.
 
-Heavy occlusion went from 22.9 % to 66.3 % pass — the largest single gain, and
-what cutout augmentation was chosen to target.
+Using the same Stage 4 error trials with different placement tolerances gives:
 
-![qualitative results](results/qualitative_mesh.png)
+| Placement tolerance | Fraction within tolerance | Interpretation |
+|---|---:|---|
+| 27.4 mm | **95.6%** | Same scale as ADD-0.1d |
+| 15 mm | **84.8%** | Representative grasp-position margin |
+| 10 mm | 70.0% | Tighter grasp placement |
+| 5 mm | **41.4%** | Precision-placement scale |
 
-Twelve test images, evenly spaced across the ADD distribution of a random
-300-image sample from the held-out test split — best case, worst case, and ten
-evenly spaced between. Not the best twelve; the last tile is a 119.5 mm failure
-and is in there deliberately.
+The important point is not that 15 mm is a universal gripper threshold; it is
+not. The point is that a benchmark threshold and a downstream task tolerance can
+ask different questions of exactly the same perception errors.
 
-**Green** is the ground-truth 3D bounding box. **Orange** is the box recovered
-from the network's predicted keypoints via `solvePnP`. **Magenta** dots are the
-drill's mesh vertices, drawn through the ground-truth pose.
+The error distribution also has a long tail. The median Stage 4 placement error
+is 6.15 mm, while the 90th percentile is 18.57 mm and the worst sampled trial is
+116.11 mm. For task success, those tails matter more than the mean alone.
 
-The box is much larger than the visible drill because the drill is L-shaped —
-body plus handle at right angles — and its axis-aligned bounding box is 57 x 183
-x 196 mm, mostly empty. The magenta points trace the actual geometry.
-Containment is verified on 300 images at 100.0 %.
+## How Stage 3 and Stage 4 errors are used
 
-Reading the grid: the nine tiles at 100 % visibility span 0.5–14.2 mm despite
-widely different orientations, distances and backgrounds. Both failures are
-occluded, at 62 % and 42 %. Orientation and viewpoint do not predict error;
-occlusion does.
+I did not fit a Gaussian noise model. `--source stage3` and `--source stage4`
+read the per-view errors saved by the previous stages and resample measured
+translation/rotation error pairs.
 
-![training curves](results/training_curves.png)
+For each trial, the stored translation magnitude and rotation magnitude are
+applied in a random direction/axis before the downstream grasp target is
+computed.
 
-Run 1's validation loss turns upward at epoch 13 while training loss keeps
-falling a further 20x — the overfitting is visible at a glance in a way
-"train/val ratio 72x" is not. Run 4 tracks to epoch 100 without separating.
+This preserves the empirical magnitude distribution, including its tail, but it
+also has a limitation: the original 6D error direction and correlations are not
+preserved. A stronger next version would save and replay the actual per-image
+SE(3) error transform instead of reconstructing one from two magnitudes.
 
-## What the measurements overturned
+## Bringing in a full robot model
 
-Three plausible hypotheses were tested and refuted. Each is recorded with its
-mechanism, because the mechanism is the transferable part.
+Stages 2 and 3 apply flange poses directly to a simulated body because those
+stages only need pose observations. Stage 5 uses the MuJoCo Menagerie UR5e so the
+flange pose is produced by forward kinematics from a joint configuration.
 
-### 1. Corner identity was never the bottleneck
+Joint targets are found with damped least-squares inverse kinematics, and the
+camera is attached to the flange using the same transform used in Stage 2.
 
-Bounding-box corners sit in empty space — no corner has local visual evidence,
-and all eight look identical. The predicted failure mode was therefore *swaps*,
-not drift, and the indicated fix would have been semantic keypoints on visible
-geometry.
+As a consistency check, recovering `T_flange_cam` from
+`inv(FK(q)) @ T_base_cam` across multiple arm configurations returns the known
+mount transform to numerical precision in the simulation.
 
-The error decomposition says otherwise. For each predicted keypoint, find the
-nearest ground-truth keypoint; if it is not the intended one, that is a swap.
+## Observation visibility and wrist occlusion
 
-| run | localisation | identity | swap rate |
-|---|---|---|---|
-| 1 | 24.5 px | 9.3 px | 14.5 % |
-| 2 | 13.2 px | 1.0 px | 3.3 % |
+Once the camera is placed on a real UR5e model, the wrist itself can enter the
+camera view. That did not appear in the earlier stages because they moved a
+camera body without the complete robot geometry.
 
-Identity was always the minor term, and better localisation dissolved most of it
-as a side effect. Switching keypoint definitions would have attacked the small
-term and left the large one untouched.
+`find_observation_pose()` therefore scores candidate viewpoints using a
+segmentation-based visibility check and rejects poses where too much of the drill
+is hidden by the arm.
 
-### 2. RANSAC does not help
+This observation-pose search is useful scene geometry for the simulation, even
+though the current Stage 5 trials do not yet run the Stage 4 network on the
+resulting camera image.
 
-If swaps were clean exchanges of well-localised points, RANSAC should reject them
-as outliers. A simulation at run 1's measured noise and swap rate predicted the
-pass rate rising from 63 % to 83 %. On real data:
+## Damped least-squares IK
 
-| | pass rate | mean ADD |
-|---|---|---|
-| least squares | 64.0 % | 34.79 mm |
-| RANSAC, 40 px | 64.1 % | 36.31 mm |
+The inverse-kinematics update is:
 
-No effect. The simulation assumed a swapped point was otherwise accurate. In
-reality a swapped keypoint is *also* imprecise, so it is not a separable outlier
-against a 24.5 px noise floor — the two error components are entangled.
-
-The threshold must be set from the measured error, not from an idea of what is
-accurate: an initial 12 px threshold, below the 24.5 px noise itself, rejected
-good points and failed to solve on a third of the images.
-
-### 3. Heatmap resolution was not the limit
-
-At 64×64 each heatmap pixel is 10 image pixels, so quantisation looked like a
-plausible precision floor. Doubling to 128×128 gave 15.19 px against 14.13 px —
-no benefit, slightly worse, 33 % slower.
-
-Run 1's 24.5 px was a *learning* limit, not a representational one, and
-augmentation was the entire fix.
-
-**The first attempt at this ablation collapsed, and that was a bug of mine.**
-Training at 128 with sigma left at 2.0 never learned: loss moved from 0.00505 to
-0.00441 over ten epochs, pixel error stayed at 226 px, and confidence sat at
-0.07–0.10 — indistinguishable from the initialisation value of
-sigmoid(−2.19) = 0.10. The network had collapsed to predicting background
-everywhere.
-
-Sigma is expressed in *heatmap* pixels, so doubling the canvas while holding
-sigma fixed shrinks the target's share of the map 4x:
-
-| | positive fraction |
-|---|---|
-| 64, σ=2.0 | 0.513 % |
-| 128, σ=2.0 | **0.128 %** |
-| 128, σ=4.0 | 0.421 % |
-
-`sigma_for()` scales sigma linearly with heatmap size, holding the target at
-40 image px wide either way. The ablation above is the corrected run.
-
-### And one that held
-
-Occlusion dominates; view geometry does not.
-
-| projected box aspect | n | ADD | pass |
-|---|---|---|---|
-| edge-on <0.35 | 101 | 15.51 mm | 90.1 % |
-| oblique 0.35–0.6 | 352 | 13.31 mm | 90.3 % |
-| broad >0.6 | 547 | 14.76 mm | 87.4 % |
-
-Flat within noise, in both run 1 and run 2. The near edge-on views flagged during
-label verification are correct labels and are not harder in practice — which
-retires the PnP-conditioning concern entirely.
-
-## Keypoints
-
-The 8 corners of the drill's axis-aligned bounding box, in the object frame.
-Mean pairwise separation 171.7 mm on a 274.0 mm object — wide spread, which
-conditions the PnP solve well.
-
-Bounding-box corners are the standard choice in the 6D pose literature (BB8,
-YOLO-6D, PVNet), which makes the numbers comparable to published work.
-
-## Renderer
-
-`01_render.py` produces domain-randomized images at 640×640 with labels.
-
-Randomized: object pose (uniform on SO(3) via quaternion sampling — sampling
-Euler angles uniformly clusters at the poles), camera pose on a dome with random
-roll, ambient level and 1–2 directional lights, floor colour, 0–4 YCB distractor
-objects, and camera `fovy` (±3°, so the network cannot memorise one intrinsic
-matrix).
-
-Not randomized: the drill's own texture, and the 640×640 resolution.
-
-### Occlusion is labelled, not avoided
-
-Every image records `visible_frac` — the fraction of the drill's projected area
-surviving occlusion, measured by a segmentation pass with and without the
-distractors. One dataset therefore supports a clean-vs-occluded ablation at
-evaluation time instead of requiring two.
-
-Four constraints keep occlusion useful rather than destructive:
-
-- `MIN_VISIBLE_FRAC = 0.35` — the fraction of the drill's *own* area still
-  visible. An early debug batch produced an image at **4 % visible**; that is
-  label noise, not a hard example.
-- `MIN_VISIBLE_PX = 6000` — an absolute floor, ~1.5 % of the frame.
-  `MIN_VISIBLE_FRAC` alone is insufficient because it is a *ratio*: a drill far
-  from the camera and 60 % occluded passes the ratio test at only a few hundred
-  pixels. Visual inspection caught this; the statistics did not.
-- `KP_MARGIN = 15 px`, `MAX_KP_OUTSIDE = 2` — the bbox is larger than the drill,
-  so demanding all 8 corners strictly in-frame would reject good close-ups. But
-  corners drifting far outside give the network a target with no visible evidence
-  and nowhere to put the heatmap peak.
-- `MIN_SEPARATION = 0.055 m` — stops distractors spawning inside the drill mesh,
-  which renders as fused objects rather than as occlusion.
-
-A bug worth recording: occlusion was originally measured on one distractor
-arrangement and then the objects were re-randomized before the final render, so
-`visible_frac` described a different image than the one saved. Fixed by storing
-the measured poses and restoring exactly those.
-
-Typical output: ~87 % mean visibility, ~44 % of images with some occlusion,
-~20 % below 70 % visible. Reject rate around 9 %.
-
-### Chunked generation
-
-```bash
-python 00_fetch_assets.py
-python 01_render.py --n 2000 --start-idx 0
-python 01_render.py --n 2000 --start-idx 2000
-# ... 4000, 6000, 8000
-python 02_build_dataset.py --val 1000 --test 1000
+```text
+dq = Jᵀ (J Jᵀ + λ² I)⁻¹ e
 ```
 
-The random seed defaults to `--start-idx`, so chunks never repeat poses.
-`02_build_dataset.py` checks for duplicate seeds and filenames, and verifies
-every manifest entry has an image on disk.
+The UR5e has closed-form IK solutions, but damped least squares is compact,
+accepts a 6D pose error directly, and remains numerically well behaved near
+singular configurations. That is useful here because noisy perception can move
+a nominal target toward an awkward or slightly unreachable pose.
 
-The test split is **stratified by occlusion**, so all three splits carry the same
-difficulty mix. A plain random split can hand you a test set that is easier than
-training, making the final number meaningless.
+`grasp_pose_from_object()` is intentionally simple. It approaches 100 mm above
+the object origin and keeps only the object's yaw when constructing the grasp
+orientation. The goal of this stage is not to optimise grasp planning; it is to
+apply the **same deterministic grasp rule** to the estimated pose and the true
+pose and measure the difference.
 
-## Label verification
+I also found that IK seeding matters. Seeding from the observation pose could
+converge to an unrelated local solution; using the fixed reference
+configuration avoids that failure in the current experiment.
 
-```bash
-python 01_render.py --n 12 --start-idx 0 --debug --out debug_data
-python 03_verify_labels.py --data debug_data --n 12 --save
-```
-
-The debug flag draws the projected wireframe. **This step is not optional** —
-both the missing absolute pixel floor and the over-permissive frame margin passed
-every summary statistic and were caught only by looking at the images.
-
-But the eye can also be wrong. Several debug images looked like the box had
-missed the drill entirely; it had not. `03_verify_labels.py` overlays the drill's
-true mesh vertices through the same stored pose. The 3D box encloses the mesh by
-construction, so its projection **must** enclose the mesh's projection —
-containment is a hard invariant, reported per image, and it has never failed.
-What those images actually showed was heavy occlusion or a near edge-on view.
-
-**Known limitation:** the verifier compares manifest against manifest and never
-opens the image, so it cannot catch a swapped or overwritten image file. A
-mistyped `--start-idx` once silently corrupted ~100 images while every check
-still passed. Re-rendering the affected chunk fixes it, since the renderer is
-deterministic from the seed.
-
-## Model
-
-ResNet-18 (ImageNet-pretrained) → deconv blocks → 8 heatmaps.
-
-| space | size | holds |
-|---|---|---|
-| image | 640×640 | stored keypoints, stored `K` |
-| input | 256×256 | what the network sees |
-| heatmap | 64×64 | targets and predictions |
-
-Predictions are scaled back to image space before PnP, because the stored camera
-matrix describes image space. Scaling `K` instead would work but leaves two `K`s
-in circulation.
-
-### Heatmaps, not coordinate regression
-
-Regressing (x, y) directly forces the network to encode position in the *values*
-of its final activations — a poor match for a convolutional trunk, which is
-translation-equivariant and naturally expresses "where" as "which unit fired".
-Heatmaps keep the representation spatial until the argmax.
-
-### Sub-pixel decoding
-
-The argmax alone quantises to whole heatmap pixels — at 64×64 that is 10 px in
-image space, enough to dominate the pose error outright.
-
-The decoder fits a quadratic to the log of the three samples along each axis
-around the peak. For a gaussian the log is exactly a parabola, so on an ideal
-heatmap the fit is an exact inverse. Under noise it roughly halves the error:
-
-| heatmap noise σ | argmax only | sub-pixel |
-|---|---|---|
-| 0.00 | 0.376 px | **0.000 px** |
-| 0.05 | 0.511 px | **0.254 px** |
-| 0.10 | 0.677 px | **0.453 px** |
-| 0.20 | 1.056 px | **0.827 px** |
-
-(heatmap pixels; ×10 for image space at 64×64)
-
-### Loss
-
-Masked MSE on sigmoid heatmaps with `pos_weight=8`. The target is ~99 % zeros, so
-unweighted MSE lets the background dominate and the network converges to
-predicting nothing everywhere — see the 128-resolution collapse above for what
-that looks like when the balance tips too far.
-
-Keypoints outside the heatmap get weight 0 rather than an all-zero target.
-Forcing "no peak" on a corner that is merely off-frame teaches the network to
-suppress evidence it can legitimately see near the border.
-
-### Augmentation
-
-Photometric — brightness, contrast, colour cast, sensor noise, defocus.
-
-In-plane affine — scale, translate, rotation. Rotation is legitimate here: it is
-exactly a roll of the camera about its optical axis, a real rigid transform, and
-the keypoints rotate with it. The affine is verified to keep keypoints
-synchronised with the image to 0.095 px, by transforming a synthetic image with
-known blob positions and re-detecting them.
-
-Cutout — random rectangles of random colour, targeting the measured weak spot.
-
-**Horizontal flip is excluded.** A mirrored drill is a scene that cannot
-physically exist, and the keypoint permutation it would require corresponds to no
-rotation in SO(3). Flip is safe for human pose; it is not safe for 6D pose of a
-chiral object.
-
-Augmentation applies to training only. Validation and test run clean, so the
-stored pose and `K` stay valid for PnP.
-
-## Training
+## Running the stage
 
 ```bash
-python 04_train.py --epochs 40 --patience 8 --aug 1.0 --tag aug
-python 04_train.py --epochs 40 --patience 8 --aug 1.0 --heatmap 128 --batch 16 --tag aug128
-python 04_train.py --epochs 40 --aug 1.0 --tag aug --resume    # keep --epochs identical
+pip install -r requirements.txt
+
+python 00_fetch_ur5e.py
+python 01_closed_loop.py --trials 200 --source perfect
+python 01_closed_loop.py --trials 200 --source stage3
+python 01_closed_loop.py --trials 500 --source stage4
+python 01_closed_loop.py --trials 500 --source stage4 --grasp-tol-mm 5
 ```
 
-Checkpoints every epoch to `checkpoints_<tag>/last.pt`, and to `best.pt` on
-validation improvement. `--resume` restores model, optimiser, scheduler, epoch
-and best score.
+The Stage 3 and Stage 4 sources require the evaluation JSON files from those
+stages, for example:
 
-Validation tracks **mean keypoint error in image-space pixels**, not loss.
-Heatmap MSE is not comparable across runs and does not track what matters
-downstream; pixel error directly limits PnP accuracy.
-
-Keep `--epochs` constant across resumes — `CosineAnnealingLR` uses it as `T_max`,
-so changing it makes the learning rate jump. The script warns if you do.
-
-Roughly 45 s/epoch at heatmap 64 on an RTX 4060 laptop with `--workers 4`, 60 s
-at 128.
-
-## Evaluation
-
-```bash
-python 05_evaluate.py --ckpt checkpoints_aug/best.pt
+```text
+../stage3_pose/results/pose_true_0.0px.json
+../stage4_keypoints/results/eval_test_aug100.json
 ```
 
-Reads the heatmap size from the checkpoint. Reports ADD, the localisation/identity
-split, and breakdowns by occlusion and projected box aspect.
+## MuJoCo model notes
 
-Figures:
+The UR5e model comes from
+[MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie) and is
+BSD-3 licensed. `ur5e/ur5e.xml` is kept as the original model, while
+`_ur5e_cam.xml` is generated with the eye-in-hand camera added.
 
-```bash
-python 06_qualitative.py --ckpt checkpoints_aug100/best.pt --mesh \
-    --out results/qualitative_mesh.png
-python 07_plot_training.py
-```
+There are two path details in MuJoCo worth keeping in mind. `<include>` paths
+and mesh/texture asset paths are resolved in slightly different ways, so the
+generated wrapper scene is kept inside the `ur5e/` directory and explicitly sets
+both `meshdir` and `texturedir`.
 
-`06_qualitative.py` samples its pool **randomly**, never as `records[:N]`:
-`02_build_dataset.py` assembles each split by iterating occlusion buckets, so
-the file is ordered by occlusion and a sequential read lands entirely inside the
-hardest bucket. The first version of this figure did exactly that and understated
-the model. `02_build_dataset.py` now shuffles after stratifying.
+## What I would change next
 
-## Status
+The main upgrade for this stage is to replace error resampling with actual
+per-image pose predictions in the UR5e scene, then move from placement tolerance
+to contact-based grasp-and-lift trials. That would turn this task-level
+sensitivity study into a genuine perception-in-the-loop manipulation experiment.
 
-- [x] Keypoint definition, verified visually and by mesh containment
-- [x] Renderer with domain randomization and occlusion labelling
-- [x] Chunked generation and stratified splits
-- [x] ResNet-18 + deconv heatmap head with sub-pixel decoding
-- [x] Training with per-epoch checkpointing, resume, early stopping
-- [x] Inference → PnP → ADD against the stage 3 baseline
-- [x] Augmentation ablation — 2.4x improvement
-- [x] Heatmap resolution ablation — no benefit
-- [ ] Longer schedule: run 2's validation loss was still falling monotonically at
-      epoch 39 and patience never fired, so the 40-epoch budget was the binding
-      constraint rather than the model
+## Current status
+
+- [x] UR5e model integrated in MuJoCo
+- [x] Eye-in-hand camera attached using the Stage 2 transform
+- [x] Forward and inverse kinematics validation
+- [x] Stage 3 marker-error propagation
+- [x] Stage 4 learned-pose error propagation
+- [x] Placement-tolerance sensitivity analysis
+- [x] Wrist / arm visibility check for candidate observation poses
+- [ ] Replay actual per-image SE(3) prediction transforms
+- [ ] Run Stage 4 inference inside each UR5e trial
+- [ ] Contact-based grasp-and-lift evaluation
+- [ ] Physical robot validation

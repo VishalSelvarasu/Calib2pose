@@ -1,100 +1,136 @@
-# Stage 2 — Hand-Eye Calibration, Validated Against Ground Truth
+# Stage 2 — Hand-Eye Calibration
 
-Solves for the camera's pose in the robot flange frame (`T_flange_camera`) —
-the transform you cannot measure with a ruler and cannot verify on real
-hardware.
+This stage estimates the rigid transform from the robot flange to the camera,
+`T_flange_cam`.
 
-Here the camera is mounted in simulation at a transform we choose, so the
-solver's output is a real error in millimetres and degrees, not a residual.
+That transform is difficult to verify directly on real hardware, so I first
+mount the camera at a known transform in simulation and check the recovered
+answer against it. This gives a real translation and rotation error instead of
+only a solver residual.
 
-## Result
+## Baseline result
 
-18 commanded flange poses, 16 with a usable board view, no detection noise:
+I commanded 18 flange poses; 16 produced a usable board observation. With no
+added corner noise, the three implemented methods give almost the same answer:
 
-| method | translation error | rotation error |
-|---|---|---|
+| Method | Translation error | Rotation error |
+|---|---:|---:|
 | PARK | 0.593 mm | **0.076°** |
 | TSAI | 0.595 mm | **0.076°** |
 | ANDREFF | **0.591 mm** | 0.077° |
 
-The noise-free figure is renderer-dependent — it measures sub-pixel
-rasterization detail as much as solver quality, and only demonstrates that the
-solver is correct. With 0.3 px corner noise, roughly what a real detector gives,
-the best method lands at about 6 mm / 0.8°. That is the honest headline number.
+The sub-millimetre noise-free result should not be interpreted as a real-camera
+accuracy claim. It depends on the renderer and sub-pixel corner localisation.
+When I add 0.3 px corner noise, which is closer to a real detection setting, the
+best result is roughly 6 mm / 0.8°.
 
-## Solvers are implemented here, not called
+## Why the solvers are implemented here
 
-OpenCV 5.0 removed `cv2.calibrateHandEye` from the Python bindings — the
-`CALIB_HAND_EYE_*` constants survive, the function does not. Rather than pin the
-project to OpenCV 4, `handeye_solvers.py` implements Tsai-Lenz (1989),
-Park & Martin (1994), and Andreff (1999) directly in numpy.
+OpenCV 5.0 no longer exposes `cv2.calibrateHandEye` through the Python bindings.
+To keep the project usable without pinning it to OpenCV 4,
+`handeye_solvers.py` contains NumPy implementations of:
 
-They were validated against OpenCV 4.13's implementation during development:
-identical to machine precision on noise-free data, agreeing to 0.04 mm under
-noise, and reproducing the degenerate failure identically.
+- Tsai-Lenz (1989)
+- Park-Martin (1994)
+- Andreff (1999)
 
-## The degenerate case
+During development I compared them with OpenCV 4.13. On noise-free data the
+results matched to machine precision, and under added noise they agreed to about
+0.04 mm. They also reproduce the same failure behaviour in the deliberately
+degenerate experiment below.
 
-Hand-eye requires the relative motions between poses to rotate about at least
-two different axes. Rotate about only one and the translation along that axis
-is mathematically unobservable. The solver does not warn you.
+## The degeneracy experiment
 
-`--degenerate` uses yaw-only motion. Result:
+Hand-eye calibration needs enough rotational diversity in the relative robot
+motions. If all rotations share the same axis, translation along that axis is
+not observable.
 
-| axis | error |
-|---|---|
+I tested that directly with `--degenerate`, which uses yaw-only motion.
+
+| Component | Error |
+|---|---:|
 | x | 0.066 mm |
 | y | 0.602 mm |
 | **z** | **81.000 mm** |
-| rotation | **0.053°** |
+| Rotation | **0.053°** |
 
-The rotation looks excellent. x and y look excellent. z is returned as exactly
-0.000 against a true 81 mm — the solver silently substituted the null answer for
-the unobservable component.
+At first glance the result looks excellent: the rotation is close and x/y are
+close. The problem is z. The solver returns zero for that unconstrained
+component even though the true camera offset is 81 mm.
 
-Why exactly 81.000 mm: the translation step solves `(R_A - I) t_X = R_X t_B - t_A`.
-When every relative rotation shares an axis `n`, the matrix `(R_A - I)` annihilates
-`n` for every pair, so the component of `t_X` along `n` is unconstrained. Least
-squares returns the minimum-norm solution, which sets it to zero — and the true
-value was 81 mm.
+The reason comes directly from the translation part of the hand-eye system:
 
-Method choice also collapses under degeneracy: PARK ends up 180° wrong, TSAI 128°
-wrong. Under good motion all three agree to within 0.005 mm.
+```text
+(R_A - I) t_X = R_X t_B - t_A
+```
 
-The script computes the minimum angle between relative-motion rotation axes
-*before* solving — 90.0° for the good set, 0.0° for the degenerate one. That is
-the check to run, not the residual.
+When every relative rotation has the same axis `n`, `(R_A - I)` has no
+sensitivity along `n`. Least squares then chooses a minimum-norm solution, which
+sets the unconstrained component to zero.
 
-## The convention that breaks everyone
+The different methods also become unreliable in different ways under this bad
+motion set. PARK ends up around 180° wrong and TSAI around 128° wrong, while the
+good motion set makes all three methods agree very closely.
 
-MuJoCo cameras look down **−Z** with **+Y up** (OpenGL). OpenCV cameras look
-down **+Z** with **+Y down**. They differ by `diag(1, -1, -1)`.
+## Detecting the problem before solving
 
-Get this wrong and hand-eye still converges, returning a plausible rotation with
-a wrong translation. The check used here: recover the board pose in the base
-frame from several different camera poses. It must come out constant, and it
-does — that constancy is what proves the conversion.
+`01_handeye.py` measures the spread between relative-motion rotation axes before
+running calibration. The good set gives about 90°, while the yaw-only set gives
+0°.
 
-On naming: the classical literature writes `gripper2base` for the transform that
-maps gripper-frame points into base coordinates — which is the flange pose
-expressed in the base frame, not a transform "to" the gripper. The solvers here
-take explicit `T_base_flange` and `T_cam_board` lists to remove the ambiguity.
+This is a useful practical guard. It is not a complete conditioning analysis,
+but it catches the deliberate single-axis failure used in this project.
 
-## Usage
+## Camera-coordinate convention
+
+One of the easiest ways to get a plausible but wrong hand-eye result is to mix
+MuJoCo/OpenGL and OpenCV camera conventions.
+
+MuJoCo cameras use **−Z forward, +Y up**. OpenCV uses **+Z forward, +Y down**.
+The conversion is:
+
+```text
+diag(1, -1, -1)
+```
+
+I verify the conversion by reconstructing the board pose in the robot base frame
+from several different camera poses. A fixed board should recover to the same
+base-frame transform each time. If that consistency check fails, the frame
+conventions are wrong somewhere in the chain.
+
+The code also uses explicit transform names such as `T_base_flange` and
+`T_cam_board`. I found this much easier to reason about than the classical
+`gripper2base` / `target2cam` naming, where the direction can be easy to misread.
+
+## Running the stage
 
 ```bash
 pip install -r requirements.txt
+
 python 01_handeye.py --n 18
 python 01_handeye.py --n 18 --degenerate
 python 01_handeye.py --n 18 --noise-px 0.3
 ```
 
-## Note on the robot
+## Why the flange poses are applied directly
 
-The flange poses are commanded directly rather than produced by an arm's
-forward kinematics. The solvers cannot tell the difference — they receive a list
-of flange poses and a list of board-in-camera poses either way. Swapping in a
-UR5e with inverse kinematics changes where the pose list comes from and nothing
-else.
+The flange poses are applied directly in simulation rather than generated by a
+full robot arm and inverse kinematics. That is intentional for this calibration
+experiment: the hand-eye solver only receives a set of flange poses and board
+poses. It does not depend on how the robot reached those poses.
 
-`board_config.py` is a copy of the stage 1 file; keep the two in sync.
+Stage 5 introduces the UR5e model and actual forward/inverse kinematics.
+
+`board_config.py` is copied from Stage 1, so changes to the board definition
+should be kept consistent between the two stages.
+
+## Current status
+
+- [x] Synthetic hand-eye calibration against a known camera mount
+- [x] Tsai-Lenz, Park-Martin, and Andreff NumPy implementations
+- [x] Cross-check against OpenCV 4.13 during development
+- [x] Added-corner-noise experiment
+- [x] Deliberately degenerate yaw-only motion experiment
+- [x] Basic motion-axis diversity warning
+- [ ] Real robot hand-eye calibration
+- [ ] Stronger conditioning / singular-value observability diagnostic
