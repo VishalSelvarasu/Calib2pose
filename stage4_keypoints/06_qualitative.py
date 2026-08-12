@@ -180,7 +180,7 @@ def main():
         draw_box(img, r["pred"], PRED_COLOUR, 2)
         img = cv2.resize(img, (args.tile, args.tile),
                          interpolation=cv2.INTER_AREA)
-        ok = r["add"] < 27.4
+        ok = r["add"] < 22.63
         caption(img, [
             (f"ADD {r['add']:.1f} mm", (255, 255, 255)),
             (f"visible {r['vis']*100:.0f}%",

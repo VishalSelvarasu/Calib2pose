@@ -17,7 +17,7 @@ reasonable from inside the estimator.
 | [1. Camera intrinsics (ChArUco)](stage1_intrinsics/) | `fx` recovered within 0.10% of ground truth | Synthetic validation complete; real capture pending |
 | [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known camera mount | Simulation complete |
 | [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d | Simulation complete |
-| [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 93.7% ADD-0.1d | Synthetic evaluation complete |
+| [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 90.2% ADD-0.1d | Synthetic evaluation complete |
 | [5. Task-level UR5e evaluation](stage5_closed_loop/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
 
 ![Qualitative Stage 4 results](stage4_keypoints/results/qualitative_mesh.png)
@@ -76,22 +76,22 @@ coordinate transform, so the local pose solver has no way to expose it.
 ## Stage 4: several reasonable hypotheses were wrong
 
 The first learned-keypoint model produced 33.78 px mean keypoint error and a
-64.0% ADD-0.1d pass rate. I initially suspected corner-identity swaps and
+55.5% ADD-0.1d pass rate. I initially suspected corner-identity swaps and
 heatmap quantisation.
 
 The measurements pointed somewhere else. Most of the error came from
 localisation rather than identity, RANSAC barely changed the result, and doubling
 the heatmap resolution did not help. Stronger augmentation and a longer training
 schedule did: the final model reached 10.78 px keypoint error, 11.21 mm mean ADD,
-and 93.7% ADD-0.1d.
+and 90.2% ADD-0.1d.
 
 ## Stage 5: benchmark tolerance and task tolerance are not the same thing
 
-For this drill, ADD-0.1d corresponds to a 27.4 mm threshold. In the UR5e
+For this drill, ADD-0.1d corresponds to a 22.6 mm threshold. In the UR5e
 simulation I propagated the measured Stage 4 error distribution through a fixed
 grasp-pose function and inverse kinematics.
 
-On the same set of trials, 95.6% landed within 27.4 mm, while 84.8% landed within
+On the same set of trials, 92.4% landed within 22.6 mm, while 84.8% landed within
 15 mm and only 41.4% landed within 5 mm. The perception result has not changed;
 only the tolerance associated with the downstream task has changed.
 
@@ -108,12 +108,12 @@ between the two perception front ends.
 | Method | Mean ADD | ADD-0.1d pass | Mean rotation error | Within 15 mm in Stage 5 |
 |---|---:|---:|---:|---:|
 | Markers (Stage 3) | 1.40 mm | 100% | 0.39° | 100% |
-| Learned keypoints (Stage 4) | 11.21 mm | 93.7% | 3.36° | 84.8% |
+| Learned keypoints (Stage 4) | 11.21 mm | 90.2% | 3.36° | 84.8% |
 
 The markerless system gives up roughly an order of magnitude in pose accuracy in
 exchange for removing the need to attach fiducials to the object. On clean test
-images it performs much better: 6.75 mm mean ADD and a 99.1% pass rate. Heavy
-occlusion is the main failure mode, where the pass rate drops to about 78%.
+images it performs much better: 6.75 mm mean ADD and a 98.2% pass rate. Heavy
+occlusion is the main failure mode, where the pass rate drops to about 68.8%.
 
 ## Object and metric
 
@@ -124,7 +124,7 @@ be used without the symmetry handling required by ADD-S.
 ADD is the mean distance between model points transformed by the estimated pose
 and the same points transformed by the ground-truth pose. The model contains
 8,945 points in this project. ADD-0.1d counts a pose as correct when its ADD is
-below 10% of the object diameter, or about 27.4 mm for the drill.
+below 10% of the object diameter, or about 22.6 mm for the drill.
 
 The use of a YCB object and a standard pose metric makes the evaluation easier to
 relate to the 6D-pose literature, although the synthetic dataset and evaluation

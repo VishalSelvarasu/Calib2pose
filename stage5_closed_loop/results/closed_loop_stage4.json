@@ -1,14 +1,14 @@
 {
   "source": "stage4",
   "trials": 500,
-  "grasp_tol_mm": 15.0,
+  "grasp_tol_mm": 5.0,
   "placement_mean_mm": 9.627615365865884,
   "placement_median_mm": 6.1524291598618746,
   "placement_p90_mm": 18.570207714607644,
   "placement_max_mm": 116.10735284277311,
   "ik_residual_mean_mm": 0.0393466460940016,
   "ik_converged_pct": 100.0,
-  "grasp_success_pct": 84.8,
+  "grasp_success_pct": 41.4,
   "observation_visibility": 0.2857568359375,
   "rows": [
     {

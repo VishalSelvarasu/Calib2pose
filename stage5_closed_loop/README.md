@@ -44,13 +44,13 @@ system.
 ## The task tolerance changes the conclusion
 
 ADD-0.1d uses 10% of the object diameter as its success threshold. The drill is
-about 274 mm across, so that threshold is 27.4 mm.
+about 226 mm across, so that threshold is 22.6 mm.
 
 Using the same Stage 4 error trials with different placement tolerances gives:
 
 | Placement tolerance | Fraction within tolerance | Interpretation |
 |---|---:|---|
-| 27.4 mm | **95.6%** | Same scale as ADD-0.1d |
+| 22.6 mm | **92.4%** | Same scale as ADD-0.1d |
 | 15 mm | **84.8%** | Representative grasp-position margin |
 | 10 mm | 70.0% | Tighter grasp placement |
 | 5 mm | **41.4%** | Precision-placement scale |

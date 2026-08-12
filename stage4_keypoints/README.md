@@ -15,10 +15,10 @@ or model selection.
 
 | Run | Main change | Mean keypoint error | Mean ADD | ADD-0.1d pass |
 |---|---|---:|---:|---:|
-| 1 | Photometric augmentation, 64×64 heatmaps | 33.78 px | 34.79 mm | 64.0% |
-| 2 | + affine + cutout | 14.13 px | 14.33 mm | 88.7% |
-| 3 | Run 2 with 128×128 heatmaps | 15.19 px | 15.26 mm | 87.8% |
-| 4 | Run 2 with a longer 100-epoch schedule | **10.78 px** | **11.21 mm** | **93.7%** |
+| 1 | Photometric augmentation, 64×64 heatmaps | 33.78 px | 34.79 mm | 55.5% |
+| 2 | + affine + cutout | 14.13 px | 14.33 mm | 84.1% |
+| 3 | Run 2 with 128×128 heatmaps | 15.19 px | 15.26 mm | 83.1% |
+| 4 | Run 2 with a longer 100-epoch schedule | **10.78 px** | **11.21 mm** | **90.2%** |
 | — | Stage 3 ArUco baseline | ~0.5 px | 1.40 mm | 100% |
 
 The biggest gain came from augmentation, not from increasing output resolution.
@@ -35,9 +35,9 @@ For the final 100-epoch model:
 
 | Visibility | n | Mean ADD | Pass rate | Keypoint error |
 |---|---:|---:|---:|---:|
-| Clean >95% | 560 | 6.75 mm | 99.1% | 7.07 px |
-| Light 70–95% | 235 | 11.46 mm | 94.5% | 11.17 px |
-| Heavy <70% | 205 | 23.07 mm | 78.0% | 20.45 px |
+| Clean >95% | 560 | 6.75 mm | 98.2% | 7.07 px |
+| Light 70–95% | 235 | 11.46 mm | 89.8% | 11.17 px |
+| Heavy <70% | 205 | 23.07 mm | 68.8% | 20.45 px |
 
 ![Qualitative results](results/qualitative_mesh.png)
 

@@ -2,15 +2,19 @@
 .venv/
 venv/
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 
-# Model weights (185 MB each, over GitHub's 100 MB limit)
+# Model weights
+# Large checkpoints are regenerated/trained locally and are not stored in Git.
 *.pt
 *.pth
 checkpoints*/
+**/checkpoints*/
 
-# Datasets and downloaded assets -- all regenerate from scripts + seeds
+# Datasets and downloaded assets
+# These can be regenerated from scripts, seeds, or download helpers.
 data/
 debug_data/
 captures/
@@ -19,19 +23,24 @@ assets/
 *.msh
 stage5_closed_loop/ur5e/
 
-# Generated MJCF, written at runtime
+# Generated MJCF / runtime files
 _scene_gen.xml
 _ur5e_cam.xml
 drill_points.npy
 
-# NOTE: results/ is NOT ignored. The JSON files are the findings the READMEs
-# cite, and the figures are the visual evidence that the pipeline ran on real
-# pixels. Only the bulky per-image verification dumps are excluded.
+# Results are intentionally kept in Git.
+# The JSON files contain the measurements cited in the READMEs,
+# and the figures preserve visual evidence from the reported runs.
+# Only bulky per-image verification outputs are excluded.
 stage4_keypoints/data/verify/
 debug_data/verify/
+
+# Local working notes
+NOTES.md
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+NOTES.md

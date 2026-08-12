@@ -175,8 +175,14 @@ class DrillScene:
         a, n = self.model.mesh_vertadr[mid], self.model.mesh_vertnum[mid]
         self.model_points = np.array(
             self.model.mesh_vert[a:a + n]).reshape(-1, 3)
-        self.diameter = float(np.linalg.norm(
-            self.model_points.max(0) - self.model_points.min(0)))
+        # True ADD diameter: the maximum distance between any two mesh points,
+        # not the bounding-box diagonal. The AABB diagonal (0.273 m here)
+        # overestimates, because no two vertices sit at opposite box corners;
+        # the true value is 0.226 m. Chunked to bound memory on 8945 points.
+        self.diameter = float(max(
+            np.linalg.norm(
+                self.model_points[i] - self.model_points, axis=1).max()
+            for i in range(len(self.model_points))))
 
     def set_flange(self, T):
         self.data.mocap_pos[0] = T[:3, 3]
