@@ -2,7 +2,10 @@ import os
 import zipfile
 import urllib.request
 
-URL = "https://codeload.github.com/vikashplus/YCB_sim/zip/refs/heads/main"
+# Pinned so a clone six months from now gets the same meshes. Update the
+# SHA deliberately, not by drifting with upstream main.
+YCB_SIM_SHA = "57546b87f4724c947eadd4241a7892473febb88d"
+URL = f"https://codeload.github.com/vikashplus/YCB_sim/zip/{YCB_SIM_SHA}"
 ASSET_DIR = "assets"
 
 OBJECTS = [
@@ -11,6 +14,15 @@ OBJECTS = [
     "005_tomato_soup_can", "006_mustard_bottle", "007_tuna_fish_can",
     "008_pudding_box", "009_gelatin_box", "010_potted_meat_can",
 ]
+
+
+def _zip_root(z):
+    """GitHub names the top folder <repo>-<ref>. Deriving it from the archive
+    means the pin above can be changed without touching the extract paths."""
+    roots = {m.split("/")[0] for m in z.namelist() if "/" in m}
+    if len(roots) != 1:
+        raise RuntimeError(f"unexpected archive layout: {sorted(roots)[:3]}")
+    return roots.pop()
 
 
 def main():
@@ -27,9 +39,10 @@ def main():
     urllib.request.urlretrieve(URL, zpath)
 
     with zipfile.ZipFile(zpath) as z:
+        root = _zip_root(z)
         for obj in need:
             for src, ext in [("meshes", "msh"), ("textures", "png")]:
-                member = f"YCB_sim-main/{src}/{obj}.{ext}"
+                member = f"{root}/{src}/{obj}.{ext}"
                 out = os.path.join(ASSET_DIR, f"{obj}.{ext}")
                 try:
                     with z.open(member) as f, open(out, "wb") as g:

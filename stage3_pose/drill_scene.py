@@ -6,7 +6,8 @@ import numpy as np
 import cv2
 import mujoco
 
-YCB_ZIP_URL = "https://codeload.github.com/vikashplus/YCB_sim/zip/refs/heads/main"
+YCB_SIM_SHA = "57546b87f4724c947eadd4241a7892473febb88d"   # see THIRD_PARTY_NOTICES.md
+YCB_ZIP_URL = f"https://codeload.github.com/vikashplus/YCB_sim/zip/{YCB_SIM_SHA}"
 ASSET_DIR = "assets"
 
 IMG_W, IMG_H = 1280, 720
@@ -30,6 +31,15 @@ PLATES = [
     (2, np.array([0.000, -0.078, 0.092]),
      np.radians([40, 0, 0])),  # tilt to -Y
 ]
+
+
+def _zip_root(z):
+    """GitHub names the top folder <repo>-<ref>. Deriving it from the archive
+    means the pin above can be changed without touching the extract paths."""
+    roots = {m.split("/")[0] for m in z.namelist() if "/" in m}
+    if len(roots) != 1:
+        raise RuntimeError(f"unexpected archive layout: {sorted(roots)[:3]}")
+    return roots.pop()
 
 
 def rpy_to_R(rpy):
@@ -76,9 +86,10 @@ def fetch_assets():
         print("downloading YCB drill mesh (~22 MB, once)...")
         urllib.request.urlretrieve(YCB_ZIP_URL, zpath)
         with zipfile.ZipFile(zpath) as z:
+            root = _zip_root(z)
             for member, out in [
-                ("YCB_sim-main/meshes/035_power_drill.msh", mesh),
-                ("YCB_sim-main/textures/035_power_drill.png", tex),
+                (f"{root}/meshes/035_power_drill.msh", mesh),
+                (f"{root}/textures/035_power_drill.png", tex),
             ]:
                 with z.open(member) as src, open(out, "wb") as dst:
                     dst.write(src.read())
