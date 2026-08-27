@@ -96,9 +96,11 @@ def main():
     ap.add_argument("--stage4-json",
                     default="../stage4_keypoints/results/eval_test_aug100.json")
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--grasp-tol-mm", type=float, default=15.0,
-                    help="how far the flange may land and still grasp; 15 mm is "
-                         "a representative parallel-jaw margin")
+    ap.add_argument("--tol-mm", type=float, nargs="+",
+                    default=[5.0, 10.0, 15.0, 22.625],
+                    help="placement tolerances to report, in mm. The whole "
+                         "curve is computed from one run, so no single "
+                         "threshold has to be chosen in advance.")
     ap.add_argument("--out", default="results")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
@@ -117,7 +119,7 @@ def main():
     if errs is not None:
         print(f"error samples   : {len(errs)}   median "
               f"{np.median(errs[:, 0]):.2f} mm / {np.median(errs[:, 1]):.2f} deg")
-    print(f"grasp tolerance : {args.grasp_tol_mm} mm")
+    print(f"tolerances      : {', '.join(f'{t:g}' for t in args.tol_mm)} mm")
 
     # Reference: where the flange lands given the TRUE pose. Deterministic, so
     # it is computed once and every trial is measured against it.
@@ -127,7 +129,7 @@ def main():
         raise SystemExit("IK failed on the true grasp pose; move the object.")
     scene.set_q(q_ref)
     T_flange_ref = scene.flange_pose()
-    print(f"reference grasp : flange at "
+    print(f"reference place : flange at "
           f"{np.round(T_flange_ref[:3, 3]*1000, 1)} mm, "
           f"IK residual {np.linalg.norm(e_ref[:3])*1000:.3f} mm")
 
@@ -168,7 +170,14 @@ def main():
     pd = np.array([r["placement_deg"] for r in rows])
     ikr = np.array([r["ik_residual_mm"] for r in rows])
     conv = np.array([r["ik_converged"] for r in rows])
-    success = float((p < args.grasp_tol_mm).mean() * 100)
+
+    # Placement within tolerance is a proxy for whether a parallel-jaw gripper
+    # could close on the object. It is NOT grasp success: there is no contact
+    # model, no gripper closure, no friction, no lift and no retention test.
+    # IK convergence is part of the criterion because a trial where IK failed
+    # did not place the flange anywhere meaningful.
+    curve = {f"{t:g}": float(((p < t) & conv).mean() * 100)
+             for t in sorted(args.tol_mm)}
 
     print(f"{'metric':<20}{'mean':>10}{'median':>10}{'p90':>10}{'max':>10}")
     print(f"{'placement error':<20}{p.mean():>8.2f}mm{np.median(p):>8.2f}mm"
@@ -178,21 +187,30 @@ def main():
     print(f"{'IK residual':<20}{ikr.mean():>8.3f}mm{np.median(ikr):>8.3f}mm"
           f"{np.percentile(ikr, 90):>8.3f}mm{ikr.max():>8.3f}mm")
     print(f"\nIK converged  : {100*conv.mean():.1f} %")
-    print(
-        f"grasp success : {success:.1f} %   (placement < {args.grasp_tol_mm} mm)")
+
+    print("\nplacement tolerance sweep (IK converged AND placement < tol)")
+    print(f"{'tolerance':<14}{'within':>10}")
+    for t, v in curve.items():
+        print(f"{t + ' mm':<14}{v:>9.1f} %")
 
     out = {"source": args.source, "trials": args.trials,
-           "grasp_tol_mm": args.grasp_tol_mm,
+           "seed": args.seed,
+           "metric": "within_placement_tolerance_pct",
+           "metric_note": ("fraction of trials where IK converged and the "
+                           "flange landed within the tolerance of its "
+                           "true-pose reference position. Not grasp success: "
+                           "no contact, closure, friction or lift is "
+                           "simulated."),
+           "within_tolerance_pct": curve,
            "placement_mean_mm": float(p.mean()),
            "placement_median_mm": float(np.median(p)),
            "placement_p90_mm": float(np.percentile(p, 90)),
            "placement_max_mm": float(p.max()),
            "ik_residual_mean_mm": float(ikr.mean()),
            "ik_converged_pct": float(100 * conv.mean()),
-           "grasp_success_pct": success,
            "observation_visibility": vis,
            "rows": rows}
-    path = os.path.join(args.out, f"closed_loop_{args.source}.json")
+    path = os.path.join(args.out, f"task_{args.source}.json")
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nwrote {path}")

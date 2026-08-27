@@ -14,6 +14,15 @@ The main metric is **placement error**: the distance between the flange pose
 reached from the estimated object pose and the flange pose reached from the true
 object pose.
 
+The reported percentage is `within_placement_tolerance_pct` — the fraction of
+trials where IK converged and that distance fell below a given tolerance.
+
+It is deliberately **not** called grasp success. Nothing here simulates gripper
+closure, contact, friction, lift or retention. Placement within a few
+millimetres is a necessary condition for a parallel-jaw grasp, not a sufficient
+one, so treat these numbers as an upper bound on what a real gripper would
+achieve.
+
 This stage is a task-level propagation experiment. It is not yet a full live
 closed-loop system: the Stage 4 network does not render and infer a new image
 inside each UR5e trial, and the gripper does not close on the object with contact
@@ -43,8 +52,10 @@ system.
 
 ## The task tolerance changes the conclusion
 
-ADD-0.1d uses 10% of the object diameter as its success threshold. The drill is
-about 226 mm across, so that threshold is 22.6 mm.
+ADD-0.1d uses 10% of the object mesh diameter as its success threshold. The
+drill mesh is 226.3 mm across at its widest, so that threshold is 22.6 mm. (Its
+bounding-box diagonal is 274.0 mm; that is a different length and is not what
+ADD-0.1d uses.)
 
 Using the same Stage 4 error trials with different placement tolerances gives:
 
@@ -54,6 +65,12 @@ Using the same Stage 4 error trials with different placement tolerances gives:
 | 15 mm | **84.8%** | Representative grasp-position margin |
 | 10 mm | 70.0% | Tighter grasp placement |
 | 5 mm | **41.4%** | Precision-placement scale |
+
+The whole curve comes from one run. An earlier version of this script wrote
+every tolerance to the same filename, so running it at 5 mm silently overwrote
+the 15 mm result and the committed artifact disagreed with this table. The
+sweep is now computed once per run and stored as a dictionary in
+`results/task_stage4.json`.
 
 The important point is not that 15 mm is a universal gripper threshold; it is
 not. The point is that a benchmark threshold and a downstream task tolerance can
@@ -134,10 +151,12 @@ configuration avoids that failure in the current experiment.
 pip install -r requirements.txt
 
 python 00_fetch_ur5e.py
-python 01_closed_loop.py --trials 200 --source perfect
-python 01_closed_loop.py --trials 200 --source stage3
-python 01_closed_loop.py --trials 500 --source stage4
-python 01_closed_loop.py --trials 500 --source stage4 --grasp-tol-mm 5
+python 01_task_error.py --trials 200 --source perfect
+python 01_task_error.py --trials 200 --source stage3
+python 01_task_error.py --trials 500 --source stage4
+
+# the tolerance sweep is computed from a single run; override it with:
+python 01_task_error.py --trials 500 --source stage4 --tol-mm 2 5 10 15 22.625
 ```
 
 The Stage 3 and Stage 4 sources require the evaluation JSON files from those
