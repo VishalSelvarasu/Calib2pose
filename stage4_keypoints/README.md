@@ -101,11 +101,8 @@ The reason is that swapped points were not otherwise accurate outliers. They
 were also noisy, so they did not form the clean inlier/outlier structure assumed
 by the toy simulation.
 
-The RANSAC evaluation is not committed as a result file, so the 36.31 mm figure
-comes from my notes rather than from an artifact in this repository. Rerun it
-with `python 05_evaluate.py --ckpt checkpoints/best.pt --ransac --out
-results/eval_test_base_ransac.json` to regenerate it, then add the pass rate to
-`tests/test_readme_consistency.py`.
+The RANSAC run is not committed as a result file, so 36.31 mm comes from my
+notes rather than an artifact in this repository.
 
 I also learned that the RANSAC threshold has to be set against the measured
 keypoint noise. My first 12 px threshold was smaller than the typical error and
