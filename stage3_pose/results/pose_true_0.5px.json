@@ -2,8 +2,8 @@
   "handeye_source": "true",
   "noise_px": 0.5,
   "n_views": 28,
-  "diameter_mm": 274.01238679885864,
-  "add_threshold_mm": 27.401238679885864,
+  "diameter_mm": 226.2502759695053,
+  "add_threshold_mm": 22.62502759695053,
   "add_mean_mm": 1.6576375678572064,
   "add_median_mm": 1.472823957716106,
   "add_max_mm": 4.234422561767908,
@@ -344,5 +344,7 @@
       "R_err_deg": 0.6387858483758996,
       "add_mm": 1.4568250235238331
     }
-  ]
+  ],
+  "metric_version": "ADD-0.1d_mesh_diameter_226.25mm",
+  "add_pass_pct": 100.0
 }

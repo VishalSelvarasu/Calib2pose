@@ -13011,5 +13011,8 @@
       "t_err_mm": 6.682313143377894,
       "R_err_deg": 4.458218261350727
     }
-  ]
+  ],
+  "diameter_mm": 226.2502759695053,
+  "add_threshold_mm": 22.62502759695053,
+  "metric_version": "ADD-0.1d_mesh_diameter_226.25mm"
 }

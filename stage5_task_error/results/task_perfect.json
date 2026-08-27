@@ -1,14 +1,21 @@
 {
   "source": "perfect",
   "trials": 200,
-  "grasp_tol_mm": 15.0,
+  "seed": 0,
+  "metric": "within_placement_tolerance_pct",
+  "metric_note": "fraction of trials where IK converged and the flange landed within the tolerance of its true-pose reference position. Not grasp success: no contact, closure, friction or lift is simulated.",
+  "within_tolerance_pct": {
+    "5": 100.0,
+    "10": 100.0,
+    "15": 100.0,
+    "22.625": 100.0
+  },
   "placement_mean_mm": 0.0,
   "placement_median_mm": 0.0,
   "placement_p90_mm": 0.0,
   "placement_max_mm": 0.0,
   "ik_residual_mean_mm": 0.03683104685368142,
   "ik_converged_pct": 100.0,
-  "grasp_success_pct": 100.0,
   "observation_visibility": 0.2857568359375,
   "rows": [
     {

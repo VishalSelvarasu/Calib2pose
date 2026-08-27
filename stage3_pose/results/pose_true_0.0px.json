@@ -3,7 +3,7 @@
   "noise_px": 0.0,
   "n_views": 28,
   "diameter_mm": 226.2502759695053,
-  "add_threshold_mm": 22.625027596950535,
+  "add_threshold_mm": 22.62502759695053,
   "add_mean_mm": 1.3983816962398734,
   "add_median_mm": 1.1510545473985423,
   "add_max_mm": 3.6420211866235506,
@@ -344,5 +344,7 @@
       "R_err_deg": 0.44802531748321295,
       "add_mm": 1.134475523994162
     }
-  ]
+  ],
+  "metric_version": "ADD-0.1d_mesh_diameter_226.25mm",
+  "add_pass_pct": 100.0
 }
