@@ -29,7 +29,7 @@ def collect(paths, board, detector, min_corners):
                 (p, f"size {img.shape[1]}x{img.shape[0]} != {size}"))
             continue
 
-        ch_c, ch_id, _, _ = detector.detectBoard(img)
+        ch_c, ch_id, _, _ = bc.detect(detector, img)
         if ch_id is None or len(ch_id) < min_corners:
             rejected.append(
                 (p, f"only {0 if ch_id is None else len(ch_id)} corners"))
@@ -54,7 +54,6 @@ def run_calibration(obj_pts, img_pts, size, fix_k3):
         # k3 is poorly conditioned on a short-focal webcam with a modest field
         # of view. Leaving it free lets it soak up noise and trade against k1.
         flags |= cv2.CALIB_FIX_K3
-    flags |= cv2.CALIB_FIX_TANGENT_DIST * 0
 
     crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-9)
     rms, K, dist, rvecs, tvecs = cv2.calibrateCamera(

@@ -168,7 +168,7 @@ def main():
         if j < len(d):
             print(f"  {name}  est {d[j]:+9.5f}   true {dist_true[j]:+9.5f}   "
                   f"err {d[j]-dist_true[j]:+9.5f}")
-    print("\nThis error, not the RMS, is what you put in the README.")
+    print("\nThis parameter error, not the RMS, is the calibration quality figure.")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 SQUARES_X = 7           # columns of chessboard squares
 SQUARES_Y = 10          # rows of chessboard squares
@@ -57,6 +58,29 @@ def get_detector(board=None):
     return cv2.aruco.CharucoDetector(
         board, charuco_params, det_params, refine_params
     )
+
+
+def normalize_charuco(charuco_corners, charuco_ids):
+    """Force detector output to the OpenCV 4.x shapes: (N,1,2) and (N,1).
+
+    OpenCV 5 returns (N,2) corners and (N,) ids. Code that indexes
+    ``corners[k, 0]`` expecting a 2D point then silently gets a scalar x
+    coordinate instead, with no exception. Normalising at the detector
+    boundary keeps the rest of the stage version-independent.
+    """
+    if charuco_corners is None or charuco_ids is None or len(charuco_ids) == 0:
+        return None, None
+    corners = np.asarray(charuco_corners, dtype=np.float32).reshape(-1, 1, 2)
+    ids = np.asarray(charuco_ids, dtype=np.int32).reshape(-1, 1)
+    return corners, ids
+
+
+def detect(detector, gray):
+    """detectBoard + shape normalisation. Use this instead of calling
+    detector.detectBoard directly."""
+    ch_c, ch_id, mk_c, mk_id = detector.detectBoard(gray)
+    ch_c, ch_id = normalize_charuco(ch_c, ch_id)
+    return ch_c, ch_id, mk_c, mk_id
 
 
 def summary() -> str:

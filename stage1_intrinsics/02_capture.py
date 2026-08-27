@@ -234,7 +234,7 @@ def main():
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        ch_c, ch_id, mk_c, mk_id = detector.detectBoard(gray)
+        ch_c, ch_id, mk_c, mk_id = bc.detect(detector, gray)
         vis = frame.copy()
 
         n_corners = 0 if ch_id is None else len(ch_id)
@@ -249,6 +249,7 @@ def main():
             state["sharp"] = sharpness(gray, ch_c)
 
             # stillness: mean motion of corners matched by id
+            # ch_c is (N,1,2) after bc.detect(); [k, 0] is the 2D point.
             cur = {int(i): ch_c[k, 0] for k, i in enumerate(ch_id.flatten())}
             shared = set(cur) & set(prev_by_id)
             if shared:
