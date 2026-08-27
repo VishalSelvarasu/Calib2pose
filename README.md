@@ -145,11 +145,6 @@ and the same points transformed by the ground-truth pose. The model contains
 8,945 points in this project. ADD-0.1d counts a pose as correct when its ADD is
 below 10% of the object diameter.
 
-The mesh diameter used for ADD is 226.3 mm: the largest distance between any two
-of the 8,945 mesh vertices. That makes the ADD-0.1d threshold 22.6 mm. The
-drill's axis-aligned bounding-box diagonal is 274.0 mm, which is a different
-length and is not the ADD diameter.
-
 The use of a YCB object and a standard pose metric makes the evaluation easier to
 relate to the 6D-pose literature, although the synthetic dataset and evaluation
 protocol here should not be treated as directly equivalent to a standard
