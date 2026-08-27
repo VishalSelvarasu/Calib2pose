@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import random
 import time
 
 import numpy as np
@@ -11,6 +12,30 @@ from dataset import DrillKeypointDataset, collate, IMAGE_SIZE
 from model import KeypointNet, HeatmapLoss, decode_heatmaps, HEATMAP_SIZE
 
 CKPT_DIR = "checkpoints"
+
+
+def set_seed(seed, deterministic=False):
+    """Seed every source of randomness the training loop touches.
+
+    Without this the augmentation stream, the weight init and the DataLoader
+    shuffle all differ between runs, so a reported number like 11.21 mm ADD
+    cannot be reproduced by retraining -- only by trusting the checkpoint.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    if deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True, warn_only=True)
+
+
+def worker_init(worker_id):
+    seed = torch.initial_seed() % 2**32
+    np.random.seed(seed + worker_id)
+    random.seed(seed + worker_id)
 
 
 def evaluate(model, loader, device, loss_fn, heatmap_size, max_batches=None):
@@ -63,7 +88,15 @@ def main():
                     help="stop after N epochs with no val improvement (0 = off)")
     ap.add_argument("--tag", default="",
                     help="suffix for the checkpoint dir, to keep runs separate")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="seeds Python, NumPy, Torch, CUDA and the DataLoader "
+                         "workers so a run can be reproduced")
+    ap.add_argument("--deterministic", action="store_true",
+                    help="also force deterministic cuDNN kernels. Slower, and "
+                         "some ops have no deterministic implementation.")
     args = ap.parse_args()
+
+    set_seed(args.seed, args.deterministic)
 
     ckpt_dir = CKPT_DIR + (f"_{args.tag}" if args.tag else "")
     os.makedirs(ckpt_dir, exist_ok=True)
@@ -76,17 +109,21 @@ def main():
                                     aug_strength=args.aug)
     val_ds = DrillKeypointDataset(args.data, "val", augment=False,
                                   heatmap_size=args.heatmap)
-    print(f"heatmap {args.heatmap}  aug {args.aug}  ckpts -> {ckpt_dir}/")
+    print(
+        f"heatmap {args.heatmap}  aug {args.aug}  seed {args.seed}  ckpts -> {ckpt_dir}/")
     if args.limit:
         train_ds.records = train_ds.records[:args.limit]
         val_ds.records = val_ds.records[:max(args.limit // 4, 8)]
     print(f"train {len(train_ds)}  val {len(val_ds)}")
 
     pin = device.type == "cuda"
+    gen = torch.Generator()
+    gen.manual_seed(args.seed)
     train_ld = DataLoader(train_ds, batch_size=args.batch, shuffle=True,
                           num_workers=args.workers, collate_fn=collate,
                           pin_memory=pin, drop_last=True,
-                          persistent_workers=args.workers > 0)
+                          persistent_workers=args.workers > 0,
+                          generator=gen, worker_init_fn=worker_init)
     val_ld = DataLoader(val_ds, batch_size=args.batch, shuffle=False,
                         num_workers=args.workers, collate_fn=collate,
                         pin_memory=pin, persistent_workers=args.workers > 0)
