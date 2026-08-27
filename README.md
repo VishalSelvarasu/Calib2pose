@@ -1,14 +1,20 @@
 # calib2pose
 
-`calib2pose` is an end-to-end study of the geometry behind robot vision: camera
-intrinsics, hand-eye calibration, 6D object pose estimation, learned keypoints,
-and the effect of perception error on a robot task.
+`calib2pose` is a simulation-first, end-to-end study of the geometry behind
+robot vision: camera intrinsics, hand-eye calibration, 6D object pose estimation,
+learned keypoints, and the effect of perception error on a robot task.
 
 The main idea is simple: I do not want to judge a stage only by the residual it
 produces. Wherever possible, I first run it in simulation, where the true
 transform is known, and measure the result directly in millimetres and degrees.
 That makes it possible to catch failures that would otherwise look perfectly
 reasonable from inside the estimator.
+
+Each stage constructs its own known camera model rather than consuming the
+previous stage's output. That is deliberate: it isolates each error source so a
+stage's result reflects only what that stage is being tested on. The exception
+is Stage 5, which propagates the measured Stage 4 error distribution forward on
+purpose.
 
 ## Project at a glance
 
@@ -75,9 +81,9 @@ coordinate transform, so the local pose solver has no way to expose it.
 
 ## Stage 4: several reasonable hypotheses were wrong
 
-The first learned-keypoint model produced 33.78 px mean keypoint error and a
-55.5% ADD-0.1d pass rate. I initially suspected corner-identity swaps and
-heatmap quantisation.
+The first learned-keypoint model produced 33.78 px mean 2D keypoint error. Its
+corresponding pose result was 34.79 mm mean ADD with a 55.5% ADD-0.1d pass
+rate. I initially suspected corner-identity swaps and heatmap quantisation.
 
 The measurements pointed somewhere else. Most of the error came from
 localisation rather than identity, RANSAC barely changed the result, and doubling
@@ -98,6 +104,19 @@ only the tolerance associated with the downstream task has changed.
 This is not yet a physical grasping experiment or a live perception-in-the-loop
 controller. It is a task-level error propagation study, which is the next step
 between pose metrics and real robot trials.
+
+## A metric bug made the early pass rates too generous
+
+ADD-0.1d uses 10% of the object mesh diameter as its success threshold. I
+initially used the drill's 274.0 mm axis-aligned bounding-box diagonal as that
+diameter. That was wrong: the actual mesh diameter is 226.3 mm, the largest
+distance between any two of the 8,945 mesh vertices, so the correct ADD-0.1d
+threshold is 22.6 mm.
+
+That mistake made every pass rate it produced several points too generous. I
+corrected the diameter calculation and kept the failure documented because it is
+exactly the kind of plausible metric error that can survive unless the quantity
+being measured is checked against its definition.
 
 ## Markers vs markerless pose
 
@@ -129,9 +148,7 @@ below 10% of the object diameter.
 The mesh diameter used for ADD is 226.3 mm: the largest distance between any two
 of the 8,945 mesh vertices. That makes the ADD-0.1d threshold 22.6 mm. The
 drill's axis-aligned bounding-box diagonal is 274.0 mm, which is a different
-length and is not the ADD diameter. I used the bounding-box diagonal by mistake
-in an earlier version of this project; every pass rate it produced was several
-points too generous.
+length and is not the ADD diameter.
 
 The use of a YCB object and a standard pose metric makes the evaluation easier to
 relate to the 6D-pose literature, although the synthetic dataset and evaluation
