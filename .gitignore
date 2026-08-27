@@ -20,8 +20,7 @@ debug_data/
 captures/
 synthetic/
 assets/
-*.msh
-stage5_closed_loop/ur5e/
+ur5e/
 
 # Generated MJCF / runtime files
 _scene_gen.xml
