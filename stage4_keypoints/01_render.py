@@ -60,7 +60,12 @@ def build_xml(n_distractors, floor_rgba, ambient, lights, fovy):
     <global offwidth="{IMG_SIZE}" offheight="{IMG_SIZE}"/>
     <headlight ambient="{ambient:.3f} {ambient:.3f} {ambient:.3f}"
                diffuse="0.05 0.05 0.05" specular="0 0 0"/>
-    <quality shadowsize="2048" offsamples="4"/>
+    <!-- offsamples=0: MuJoCo's docs note that some backends ignore the
+         instruction to disable multisampling during segmentation rendering.
+         With MSAA on, edge pixels get blended segmentation ids and the
+         occluded/unoccluded pixel counts stop being comparable, which is how
+         84/1000 samples ended up with visible_frac slightly above 1.0. -->
+    <quality shadowsize="2048" offsamples="0"/>
   </visual>
   <asset>
     {mesh_xml}
@@ -200,7 +205,6 @@ def render_one(rng, debug=False):
     renderer.update_scene(data, camera="cam")
     full = int((renderer.render()[:, :, 0] == gid).sum())
     renderer.disable_segmentation_rendering()
-    visible_frac = float(visible / max(full, 1))
 
     # restore the distractors to the SAME poses that were measured
     for i, p in enumerate(dist_poses):
@@ -208,7 +212,21 @@ def render_one(rng, debug=False):
     mujoco.mj_forward(model, data)
     if visible < MIN_VISIBLE_PX:
         return None
-    visible_frac = float(visible / max(full, 1))
+
+    # A visibility FRACTION above 1 means the occluded pass found more drill
+    # pixels than the unoccluded one, which is impossible. Log it rather than
+    # clamping silently: the clamp hides the cause, and the cause was
+    # multisampled segmentation rendering.
+    if visible > full:
+        over = visible / max(full, 1)
+        if over > 1.02:
+            raise RuntimeError(
+                f"visible ({visible}) exceeds unoccluded ({full}) by "
+                f"{100*(over-1):.1f}%. Check <quality offsamples> and that "
+                f"the distractors really moved out of frame.")
+        print(f"  [warn] visible/full = {over:.4f} (>1 by "
+              f"{100*(over-1):.2f}%), clamping")
+    visible_frac = float(min(visible / max(full, 1), 1.0))
 
     # A drill at 4% visible still carries a full 8-keypoint label, which teaches
     # the network to hallucinate corners from a few pixels. Occlusion is wanted;
