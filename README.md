@@ -18,7 +18,7 @@ reasonable from inside the estimator.
 | [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known camera mount | Simulation complete |
 | [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d | Simulation complete |
 | [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 90.2% ADD-0.1d | Synthetic evaluation complete |
-| [5. Task-level UR5e evaluation](stage5_closed_loop/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
+| [5. Task-level UR5e evaluation](stage5_task_error/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
 
 ![Qualitative Stage 4 results](stage4_keypoints/results/qualitative_mesh.png)
 
@@ -117,14 +117,21 @@ occlusion is the main failure mode, where the pass rate drops to about 68.8%.
 
 ## Object and metric
 
-The experiments use the YCB power drill (`035_power_drill`). Its diameter is
-approximately 274.0 mm. I chose it because it is asymmetric, so standard ADD can
-be used without the symmetry handling required by ADD-S.
+The experiments use the YCB power drill (`035_power_drill`). I chose it because
+it is asymmetric, so standard ADD can be used without the symmetry handling
+required by ADD-S.
 
 ADD is the mean distance between model points transformed by the estimated pose
 and the same points transformed by the ground-truth pose. The model contains
 8,945 points in this project. ADD-0.1d counts a pose as correct when its ADD is
-below 10% of the object diameter, or about 22.6 mm for the drill.
+below 10% of the object diameter.
+
+The mesh diameter used for ADD is 226.3 mm: the largest distance between any two
+of the 8,945 mesh vertices. That makes the ADD-0.1d threshold 22.6 mm. The
+drill's axis-aligned bounding-box diagonal is 274.0 mm, which is a different
+length and is not the ADD diameter. I used the bounding-box diagonal by mistake
+in an earlier version of this project; every pass rate it produced was several
+points too generous.
 
 The use of a YCB object and a standard pose metric makes the evaluation easier to
 relate to the 6D-pose literature, although the synthetic dataset and evaluation
@@ -149,9 +156,13 @@ The most important next steps are:
 ## A note on the hand-eye solvers
 
 `stage2_handeye/handeye_solvers.py` contains NumPy implementations of Tsai-Lenz,
-Park-Martin, and Andreff hand-eye calibration. I added them because OpenCV 5.0
-no longer exposes `cv2.calibrateHandEye` in the Python bindings. The
-implementations were cross-checked against OpenCV 4.13 during development.
+Park-Martin, and Andreff hand-eye calibration. I wrote them because
+`opencv-contrib-python` 5.0.0.93 does not expose `cv2.calibrateHandEye` in its
+Python bindings; OpenCV tracks this as a bindings bug
+([opencv/opencv#29565](https://github.com/opencv/opencv/issues/29565)), so it
+may be restored in a later package. The implementations were cross-checked
+against OpenCV 4.13 during development, and `tests/test_handeye.py` checks all
+three against exact synthetic AX = XB data on every run.
 
 Each stage has its own README with the method, experiments, and the failures I
-ran into while building it. `NOTES.md` is the shorter working log.
+ran into while building it.
