@@ -19,9 +19,15 @@ points. For each test pose, the points are transformed once with the estimated
 pose and once with the known ground-truth pose, and the mean 3D distance is
 reported.
 
-The drill diameter is approximately 274.0 mm, so ADD-0.1d uses a threshold of
-22.6 mm. Because the drill is asymmetric, standard ADD is appropriate; a
-symmetric object would require a symmetry-aware metric such as ADD-S.
+The mesh diameter used for ADD is 226.3 mm: the largest distance between any two
+of the 8,945 mesh vertices. That makes the ADD-0.1d threshold 22.6 mm. The
+drill's axis-aligned bounding-box diagonal is 274.0 mm, which is a different
+length and is not the ADD diameter. I used the bounding-box diagonal by mistake
+in an earlier version of this project; every pass rate it produced was several
+points too generous.
+
+Because the drill is asymmetric, standard ADD is appropriate; a symmetric
+object would require a symmetry-aware metric such as ADD-S.
 
 ## Results
 
@@ -36,7 +42,7 @@ enough visible marker corners for PnP.
 | **Degenerate Stage 2 hand-eye (~81 mm error)** | **81.40 mm** | **81.37 mm** | **84.07 mm** | **0%** |
 
 For the baseline run, mean reprojection error is 0.533 px and mean rotation
-error is 0.390°. A 1.40 mm ADD on a 226 mm object is about 0.5% of the object
+error is 0.390°. A 1.40 mm ADD on a 226.3 mm object is about 0.6% of the object
 diameter.
 
 ## What the error comparison shows

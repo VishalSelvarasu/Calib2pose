@@ -9,13 +9,19 @@ Ordering is the (x, y, z) min/max product in that nesting order:
     kp0 (-x,-y,-z)   kp1 (-x,-y,+z)   kp2 (-x,+y,-z)   kp3 (-x,+y,+z)
     kp4 (+x,-y,-z)   kp5 (+x,-y,+z)   kp6 (+x,+y,-z)   kp7 (+x,+y,+z)
 
-Bounding-box corners are the standard choice in the 6D pose literature (BB8,
-YOLO-6D, PVNet all use them), which makes the numbers comparable. The cost is
-that no corner sits on a visible surface -- the network must infer each one
-from the object's overall shape rather than from local evidence.
+Projected 3D bounding-box corners are one of the standard keypoint choices in
+the 6D pose literature: BB8 and YOLO-6D both regress the eight projected box
+vertices and recover pose with PnP. Other methods choose differently -- PVNet
+votes pixel-wise for keypoints selected by farthest point sampling on the
+object surface, which keeps every keypoint on the object itself. The cost of
+box corners is exactly that: no corner sits on a visible surface, so the
+network must infer each one from the object's overall shape rather than from
+local evidence.
 
-Mean pairwise separation is 171.7 mm on a 274.0 mm object: wide spread, which
-is what conditions the PnP solve well.
+Mean separation over the 28 unique corner pairs is 196.2 mm, on an object whose
+AABB diagonal is 274.0 mm. (Averaging the full 8x8 distance matrix instead
+gives 171.7 mm, because it includes the eight zero self-distances.) Wide
+spread is what conditions the PnP solve well.
 """
 
 import numpy as np

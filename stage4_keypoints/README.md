@@ -92,16 +92,20 @@ If the main failure mode had been a few cleanly swapped points, RANSAC should
 have been a natural fix. A simple simulation using the measured swap rate
 suggested a large improvement.
 
-On the actual run-1 predictions, it did not happen:
-
-| PnP method | Pass rate | Mean ADD |
-|---|---:|---:|
-| Least squares | 64.0% | 34.79 mm |
-| RANSAC, 40 px threshold | 64.1% | 36.31 mm |
+On the actual run-1 predictions, it did not happen. Least squares gives 34.79 mm
+mean ADD and a 55.5% pass rate (`results/eval_test_base.json`); switching to
+`solvePnPRansac` with a 40 px reprojection threshold moved the mean ADD to
+36.31 mm, marginally worse.
 
 The reason is that swapped points were not otherwise accurate outliers. They
 were also noisy, so they did not form the clean inlier/outlier structure assumed
 by the toy simulation.
+
+The RANSAC evaluation is not committed as a result file, so the 36.31 mm figure
+comes from my notes rather than from an artifact in this repository. Rerun it
+with `python 05_evaluate.py --ckpt checkpoints/best.pt --ransac --out
+results/eval_test_base_ransac.json` to regenerate it, then add the pass rate to
+`tests/test_readme_consistency.py`.
 
 I also learned that the RANSAC threshold has to be set against the measured
 keypoint noise. My first 12 px threshold was smaller than the typical error and
@@ -134,11 +138,11 @@ that corrected experiment.
 
 For the final model:
 
-| Projected box aspect | n | Mean ADD | Pass rate |
+| Projected box aspect | n | Mean ADD | ADD-0.1d pass |
 |---|---:|---:|---:|
-| Edge-on <0.35 | 101 | 14.28 mm | 93.1% |
-| Oblique 0.35–0.6 | 352 | 10.37 mm | 95.2% |
-| Broad >0.6 | 547 | 11.17 mm | 92.9% |
+| Edge-on <0.35 | 101 | 14.28 mm | 87.1% |
+| Oblique 0.35–0.6 | 352 | 10.37 mm | 91.2% |
+| Broad >0.6 | 547 | 11.17 mm | 90.1% |
 
 There is some variation, but nothing close to the gap created by heavy
 occlusion. The near edge-on samples that looked suspicious during label checking
