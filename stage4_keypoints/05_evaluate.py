@@ -68,6 +68,9 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--min-conf", type=float, default=0.0,
                     help="drop keypoints below this heatmap confidence before PnP")
+    ap.add_argument("--no-oracle-mask", action="store_true",
+                    help="ignore the ground-truth in-frame mask and use "
+                         "confidence alone, as a deployed system would")
     ap.add_argument("--ransac", action="store_true",
                     help="use solvePnPRansac, which rejects swapped keypoints as "
                          "outliers instead of fitting to them")
@@ -114,7 +117,9 @@ def main():
 
             for b in range(len(pred_img)):
                 rec = ds.records[int(batch["idx"][b])]
-                valid = weight[b] > 0
+                gt_valid = weight[b] > 0
+                valid = np.ones_like(
+                    gt_valid) if args.no_oracle_mask else gt_valid
                 use = valid & (conf[b] >= args.min_conf)
 
                 kp_err = np.linalg.norm(pred_img[b] - gt_img[b], axis=1)
@@ -238,6 +243,11 @@ def main():
 
     out = {
         "ckpt": args.ckpt, "split": args.split, "n": len(rows),
+        "oracle_mask": not args.no_oracle_mask,
+        "min_conf": args.min_conf,
+        "diameter_mm": DRILL_DIAMETER_M * 1000,
+        "add_threshold_mm": ADD_THRESHOLD_M * 1000,
+        "metric_version": "ADD-0.1d_mesh_diameter_226.25mm",
         "kp_err_mean_px": float(np.nanmean(kpe)),
         "kp_err_median_px": float(np.nanmedian(kpe)),
         "kp_err_assigned_px": float(np.nanmean(kpa)),
@@ -250,7 +260,9 @@ def main():
     }
     tag = os.path.basename(os.path.dirname(args.ckpt)).replace(
         "checkpoints", "") or "base"
-    suffix = "_ransac" if args.ransac else ""
+    suffix = (("_ransac" if args.ransac else "")
+              + ("_noOracle" if args.no_oracle_mask else "")
+              + (f"_conf{args.min_conf:g}" if args.min_conf > 0 else ""))
     path = os.path.join(
         args.out, f"eval_{args.split}_{tag.strip('_')}{suffix}.json")
     with open(path, "w") as f:
