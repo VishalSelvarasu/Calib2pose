@@ -23,7 +23,7 @@ purpose.
 | [1. Camera intrinsics (ChArUco)](stage1_intrinsics/) | `fx` recovered within 0.10% of ground truth | Synthetic validation complete; real capture pending |
 | [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known camera mount | Simulation complete |
 | [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d | Simulation complete |
-| [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 90.2% ADD-0.1d | Synthetic evaluation complete |
+| [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 90.2% ADD-0.1d (90.0% without ground-truth keypoint filtering) | Synthetic evaluation complete |
 | [5. Task-level UR5e evaluation](stage5_task_error/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
 
 ![Qualitative Stage 4 results](stage4_keypoints/results/qualitative_mesh.png)
@@ -90,6 +90,11 @@ localisation rather than identity, RANSAC barely changed the result, and doublin
 the heatmap resolution did not help. Stronger augmentation and a longer training
 schedule did: the final model reached 10.78 px keypoint error, 11.21 mm mean ADD,
 and 90.2% ADD-0.1d.
+
+The evaluation originally used ground-truth keypoint visibility to decide which
+correspondences reached PnP, which a deployed system would not have. Re-running
+without it gives 90.0% instead of 90.2%, so the protocol was not what produced
+the result.
 
 ## Stage 5: benchmark tolerance and task tolerance are not the same thing
 
@@ -161,20 +166,3 @@ The most important next steps are:
 
 - Run the Stage 1 calibration on the real webcam.
 - Perform the hand-eye and marker baseline on real hardware.
-- Evaluate the learned model on real images.
-- Feed the actual per-image SE(3) prediction errors into the robot experiment.
-- Measure physical grasp success rather than only placement tolerance.
-
-## A note on the hand-eye solvers
-
-`stage2_handeye/handeye_solvers.py` contains NumPy implementations of Tsai-Lenz,
-Park-Martin, and Andreff hand-eye calibration. I wrote them because
-`opencv-contrib-python` 5.0.0.93 does not expose `cv2.calibrateHandEye` in its
-Python bindings; OpenCV tracks this as a bindings bug
-([opencv/opencv#29565](https://github.com/opencv/opencv/issues/29565)), so it
-may be restored in a later package. The implementations were cross-checked
-against OpenCV 4.13 during development, and `tests/test_handeye.py` checks all
-three against exact synthetic AX = XB data on every run.
-
-Each stage has its own README with the method, experiments, and the failures I
-ran into while building it.
