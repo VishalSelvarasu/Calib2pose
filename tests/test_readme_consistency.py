@@ -106,10 +106,23 @@ CLAIMS = [
      lambda: f"{mean_add(f'{S4}/eval_test_aug100.json', EDGE):.2f} mm"),
     ("stage4_keypoints/README.md", "edge-on pass", "87.1%",
      lambda: f"{rate(f'{S4}/eval_test_aug100.json', EDGE):.1f}%"),
+    ("stage4_keypoints/README.md", "oblique mean ADD", "10.37 mm",
+     lambda: f"{mean_add(f'{S4}/eval_test_aug100.json', OBLIQUE):.2f} mm"),
     ("stage4_keypoints/README.md", "oblique pass", "91.2%",
      lambda: f"{rate(f'{S4}/eval_test_aug100.json', OBLIQUE):.1f}%"),
+    ("stage4_keypoints/README.md", "broad mean ADD", "11.17 mm",
+     lambda: f"{mean_add(f'{S4}/eval_test_aug100.json', BROAD):.2f} mm"),
     ("stage4_keypoints/README.md", "broad pass", "90.1%",
      lambda: f"{rate(f'{S4}/eval_test_aug100.json', BROAD):.1f}%"),
+
+    ("stage4_keypoints/README.md", "no-oracle conf0.3 pass", "90.1%",
+     lambda: f"{rate(f'{S4}/eval_test_aug100_noOracle_conf0.3.json'):.1f}%"),
+    ("stage4_keypoints/README.md", "unfiltered pass", "90.0%",
+     lambda: f"{rate(f'{S4}/eval_test_aug100_noOracle.json'):.1f}%"),
+    ("stage4_keypoints/README.md", "no-oracle mean ADD", "11.37 mm",
+     lambda: f"{mean_add(f'{S4}/eval_test_aug100_noOracle_conf0.3.json'):.2f} mm"),
+    ("stage4_keypoints/README.md", "unfiltered mean ADD", "11.41 mm",
+     lambda: f"{mean_add(f'{S4}/eval_test_aug100_noOracle.json'):.2f} mm"),
 
     ("stage5_task_error/README.md", "5 mm", "41.4%",
      lambda: f"{within(f'{S5}/task_stage4.json', 5.0):.1f}%"),
@@ -135,6 +148,22 @@ def test_readme_matches_artifact(readme, label, quoted, recompute):
 
 def test_stage4_results_record_their_threshold():
     for fn in ["eval_test_base.json", "eval_test_aug.json",
-               "eval_test_aug128.json", "eval_test_aug100.json"]:
+               "eval_test_aug128.json", "eval_test_aug100.json",
+               "eval_test_aug100_noOracle.json",
+               "eval_test_aug100_noOracle_conf0.3.json"]:
         d = _json(f"{S4}/{fn}")
         assert "add_threshold_mm" in d and "metric_version" in d
+
+
+def test_all_stage4_results_use_one_diameter():
+    """The migration stamped 226.2502759695053; the evaluator once stamped the
+    rounded 0.2263 constant. Both carried the same metric_version label."""
+    seen = {}
+    for fn in sorted(os.listdir(os.path.join(ROOT, S4))):
+        if not fn.endswith(".json"):
+            continue
+        d = _json(f"{S4}/{fn}")
+        if "diameter_mm" in d:
+            seen.setdefault(round(d["diameter_mm"], 6), []).append(fn)
+    assert len(seen) == 1, f"result files disagree on the ADD diameter: {seen}"
+    assert abs(next(iter(seen)) - MESH_DIAMETER_MM) < 1e-6

@@ -25,9 +25,12 @@ def test_add_threshold_uses_the_mesh_diameter():
 
 
 def test_evaluate_script_uses_the_mesh_diameter():
+    import re
     src = open(os.path.join(ROOT, "stage4_keypoints/05_evaluate.py"),
                encoding="utf-8").read()
-    assert "DRILL_DIAMETER_M = 0.2263" in src
+    m = re.search(r"DRILL_DIAMETER_M\s*=\s*([\d.]+)", src)
+    assert m, "05_evaluate.py no longer defines DRILL_DIAMETER_M"
+    assert abs(float(m.group(1)) * 1000 - MESH_DIAMETER_MM) < 1e-6
 
 
 def test_keypoint_separation_is_over_unique_pairs():

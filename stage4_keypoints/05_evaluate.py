@@ -12,7 +12,7 @@ from common.metrics import add_metric
 from dataset import DrillKeypointDataset, collate, IMAGE_SIZE
 from model import KeypointNet, decode_heatmaps, HEATMAP_SIZE
 
-DRILL_DIAMETER_M = 0.2263
+DRILL_DIAMETER_M = 0.2262502759695053
 ADD_THRESHOLD_M = 0.1 * DRILL_DIAMETER_M
 ASSET_DIR = "assets"
 

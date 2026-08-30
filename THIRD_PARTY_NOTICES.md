@@ -1,4 +1,4 @@
-﻿# Third-party notices
+# Third-party notices
 
 External assets are downloaded at setup, not vendored.
 
