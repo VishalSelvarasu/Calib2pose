@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pytest
+from common.metrics import add_metric, adds_metric, wilson_interval
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -56,3 +57,34 @@ def test_add_scales_linearly_with_translation():
     a = add_metric(pts, tf.make_T(np.eye(3), [0.002, 0, 0]), np.eye(4))
     b = add_metric(pts, tf.make_T(np.eye(3), [0.004, 0, 0]), np.eye(4))
     assert abs(b - 2 * a) < 1e-12
+
+
+def test_wilson_brackets_the_point_estimate():
+    for s, n in [(902, 1000), (424, 500), (28, 28), (0, 10), (5, 10)]:
+        lo, hi = wilson_interval(s, n)
+        assert lo <= s / n <= hi
+        assert 0.0 <= lo and hi <= 1.0
+
+
+def test_wilson_is_not_degenerate_at_the_boundary():
+    """The normal approximation gives [1.0, 1.0] at 28/28. Wilson must not."""
+    lo, hi = wilson_interval(28, 28)
+    assert hi == 1.0
+    assert 0.85 < lo < 0.90, f"28/28 lower bound is {lo:.3f}"
+
+    lo, hi = wilson_interval(0, 28)
+    assert lo == 0.0
+    assert 0.10 < hi < 0.15
+
+
+def test_wilson_narrows_with_more_samples():
+    wide = wilson_interval(9, 10)
+    narrow = wilson_interval(900, 1000)
+    assert (narrow[1] - narrow[0]) < (wide[1] - wide[0]) / 5
+
+
+def test_wilson_matches_known_values():
+    lo, hi = wilson_interval(902, 1000)
+    assert abs(lo - 0.8820) < 0.002 and abs(hi - 0.9192) < 0.002
+    lo, hi = wilson_interval(424, 500)
+    assert abs(lo - 0.8143) < 0.002 and abs(hi - 0.8770) < 0.002

@@ -1,5 +1,3 @@
-"""6D pose metrics."""
-
 import numpy as np
 
 
@@ -27,3 +25,19 @@ def adds_metric(model_pts, T_est, T_true, max_pts=2000):
     b = (T_true[:3, :3] @ p.T).T + T_true[:3, 3]
     d, _ = cKDTree(b).query(a)
     return float(d.mean())
+
+
+def wilson_interval(successes, n, z=1.96):
+    """Wilson score interval for a binomial proportion, returned as (lo, hi).
+
+    Wilson rather than the normal approximation, which degenerates near p = 0
+    and p = 1: at 28/28 it gives [1.0, 1.0], which 28 samples do not support.
+    Wilson gives [0.879, 1.0] there. Default z = 1.96 is the 95% interval.
+    """
+    if n == 0:
+        return (0.0, 1.0)
+    p = successes / n
+    d = 1 + z ** 2 / n
+    centre = (p + z ** 2 / (2 * n)) / d
+    half = z * ((p * (1 - p) / n + z ** 2 / (4 * n ** 2)) ** 0.5) / d
+    return (max(0.0, centre - half), min(1.0, centre + half))
