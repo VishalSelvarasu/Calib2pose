@@ -146,4 +146,21 @@ def motion_axis_spread(T_base_flange, min_angle_deg=5.0):
     return float(np.degrees(np.arccos(np.clip(np.abs(axes @ axes.T).min(), -1, 1))))
 
 
+def motion_conditioning(T_base_flange, min_angle_deg=5.0):
+    C = []
+    n = len(T_base_flange)
+    for i in range(n):
+        for j in range(i + 1, n):
+            A = np.linalg.inv(T_base_flange[j]) @ T_base_flange[i]
+            if np.degrees(np.linalg.norm(_log_so3(A[:3, :3]))) < min_angle_deg:
+                continue
+            C.append(A[:3, :3] - np.eye(3))
+    if not C:
+        return np.zeros(3), np.inf, np.array([0.0, 0.0, 1.0])
+
+    _, s, Vt = np.linalg.svd(np.vstack(C))
+    cond = np.inf if s[-1] < 1e-12 else float(s[0] / s[-1])
+    return s, cond, Vt[-1]
+
+
 SOLVERS = {"PARK": solve_park, "TSAI": solve_tsai, "ANDREFF": solve_andreff}

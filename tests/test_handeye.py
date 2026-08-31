@@ -75,3 +75,35 @@ def test_degenerate_motion_is_detected_by_axis_spread():
 
     _, diverse, _ = _synthetic(seed=5)
     assert hs.motion_axis_spread(diverse) >= 10.0
+
+
+def test_conditioning_flags_yaw_only_motion():
+    """Yaw-only: the stacked (R_A - I) system loses rank along the shared
+    axis, and the null direction should recover that axis."""
+    rng = np.random.default_rng(3)
+    flange = []
+    for _ in range(12):
+        ang = rng.uniform(-np.pi, np.pi)
+        R = np.array([[np.cos(ang), -np.sin(ang), 0],
+                      [np.sin(ang), np.cos(ang), 0],
+                      [0, 0, 1.0]])
+        flange.append(tf.make_T(R, rng.uniform(-0.3, 0.3, 3)))
+
+    s, cond, null = hs.motion_conditioning(flange)
+    assert s[-1] < 1e-9, f"smallest singular value is {s[-1]:.3e}, expected ~0"
+    assert cond > 1e6
+    assert abs(abs(null @ np.array([0.0, 0.0, 1.0])) - 1.0) < 1e-6
+
+
+def test_conditioning_accepts_diverse_motion():
+    _, flange, _ = _synthetic(seed=5)
+    s, cond, _ = hs.motion_conditioning(flange)
+    assert s[-1] > 0.1
+    assert cond < 100
+
+
+def test_conditioning_needs_no_ground_truth():
+    """It takes only the flange poses -- no X, no board observations."""
+    import inspect
+    sig = inspect.signature(hs.motion_conditioning)
+    assert list(sig.parameters) == ["T_base_flange", "min_angle_deg"]

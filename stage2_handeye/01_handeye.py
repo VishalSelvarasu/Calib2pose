@@ -81,6 +81,7 @@ def main():
 
     T_true = ss.gt_T_flange_cam()
     spread = hs.motion_axis_spread(flange_poses)
+    sv, cond, null = hs.motion_conditioning(flange_poses)
 
     print(f"views used        : {used} / {args.n}")
     print(f"motion axis spread: {spread:.1f} deg   "
@@ -88,6 +89,10 @@ def main():
     print(f"corner noise      : {args.noise_px} px")
     print("\nground truth  T_flange_camera")
     print(f"  t = {np.round(T_true[:3, 3] * 1000, 3)} mm")
+    print(f"singular values   : {sv[0]:.3f}  {sv[1]:.3f}  {sv[2]:.3e}")
+    print(f"condition number  : {cond:.3e}")
+    print(
+        f"weakest direction : [{null[0]:+.3f} {null[1]:+.3f} {null[2]:+.3f}]")
 
     rows, best = [], None
     print("\n--- recovered camera pose in flange frame -------------------")
@@ -121,6 +126,9 @@ def main():
 
     out = {
         "n_views": used, "motion_axis_spread_deg": spread,
+        "singular_values": sv.tolist(),
+        "condition_number": float(cond) if np.isfinite(cond) else None,
+        "weakest_direction": null.tolist(),
         "degenerate": bool(args.degenerate), "noise_px": args.noise_px,
         "T_flange_cam_true": T_true.tolist(), "methods": rows,
         "best_method": best["method"],

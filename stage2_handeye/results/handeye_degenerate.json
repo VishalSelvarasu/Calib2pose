@@ -1,6 +1,17 @@
 {
   "n_views": 18,
   "motion_axis_spread_deg": 0.0,
+  "singular_values": [
+    7.715766763269699,
+    7.715766763269699,
+    1.464484751053976e-15
+  ],
+  "condition_number": null,
+  "weakest_direction": [
+    -0.0,
+    -0.0,
+    -1.0
+  ],
   "degenerate": true,
   "noise_px": 0.0,
   "T_flange_cam_true": [

@@ -97,7 +97,7 @@ With no added image-corner noise, all three implemented methods recover almost t
 
 | Method  | Translation error | Rotation error |
 | ------- | ----------------: | -------------: |
-| PARK    |          0.593 mm |     **0.076°** |
+| PARK    |          0.593 mm |         0.079° |
 | TSAI    |          0.595 mm |     **0.076°** |
 | ANDREFF |      **0.591 mm** |         0.077° |
 
@@ -141,18 +141,20 @@ For example:
 python 01_handeye.py --n 18 --noise-px 0.3
 ```
 
-With approximately **0.3 px corner noise**, the best calibration result is roughly:
+A development run with approximately **0.3 px corner noise** produced roughly:
 
 ```text
 6 mm translation error
 0.8° rotation error
 ```
 
-This experiment demonstrates an important practical point:
+This run is not currently committed as a result file, so these figures should be treated as development-run notes rather than a manifest-backed result.
+
+The experiment illustrates an important practical point:
 
 > Very small errors obtained from ideal synthetic observations should not be interpreted as real-hardware calibration accuracy.
 
-The added-noise experiment provides a more conservative estimate of how image-measurement uncertainty can propagate into the recovered hand-eye transform.
+The added-noise run provides an indication of how image-measurement uncertainty can propagate into the recovered hand-eye transform, but the numerical result should be committed as an artifact before being treated as a reproducible Stage 2 result.
 
 ---
 
@@ -178,15 +180,17 @@ During development, the implementations were cross-checked against OpenCV 4.13.
 
 For noise-free synthetic data, the implementations matched the OpenCV results to machine precision.
 
-Under added corner noise, the resulting translation estimates agreed to approximately:
+Development notes also record that, under added corner noise, the resulting translation estimates agreed to approximately:
 
 ```text
 0.04 mm
 ```
 
+No committed Stage 2 result artifact currently backs the 0.04 mm figure, so it should be treated as a development-note result rather than a reproducible repository result.
+
 The implementations also reproduce the expected failure behaviour in the deliberately degenerate motion experiment described below.
 
-This comparison provides an independent check that the custom implementations reproduce the established solver behaviour under the tested conditions.
+This comparison provides an independent development check that the custom implementations reproduce the established solver behaviour under the tested conditions.
 
 ---
 
@@ -227,42 +231,39 @@ which corresponds to the camera offset that cannot be recovered from the degener
 
 This example demonstrates why checking only rotation error, reprojection quality, or a subset of translation components can be misleading.
 
----
+## Detecting the degeneracy before solving
 
-# Why the degeneracy occurs
+The axis-spread check is a heuristic. The underlying problem is that
+`_solve_translation` fits `(R_A - I) t_X = R_X t_B - t_A` by least squares, and
+if every relative rotation shares an axis, that stacked matrix is rank 2 --
+`lstsq` returns the minimum-norm answer without complaint.
 
-The translation component of the hand-eye relationship can be written as:
+`motion_conditioning()` takes the SVD of that matrix directly:
 
-```text
-(R_A - I) t_X = R_X t_B - t_A
-```
+| Motion set | Singular values        | Weakest direction        |
+| ---------- | ---------------------- | ------------------------ |
+| Diverse    | 10.849, 10.667, 4.313  | [+0.169, -0.098, -0.981] |
+| Yaw-only   | 7.716, 7.716, 1.46e-15 | [-0.000, -0.000, -1.000] |
 
-where:
+On the yaw-only set the third singular value is at machine precision and the
+null direction is the shared rotation axis. The recovered translation was wrong
+by 81.000 mm in z and by less than 0.7 mm in x and y, so the SVD predicts not
+just that the calibration will fail but which component will be wrong.
 
-* `R_A` is the relative robot rotation;
-* `R_X` is the unknown hand-eye rotation;
-* `t_X` is the unknown hand-eye translation;
-* `t_A` and `t_B` are the corresponding relative translations.
+This needs no ground truth -- it is computed from the flange poses alone, before
+solving. The 81 mm figure and the axis-spread check both require knowing the
+answer already.
 
-Suppose every relative rotation shares the same axis:
+The diverse set is still least constrained mostly along z: its weakest direction
+is `[+0.169 -0.098 -0.981]`, with `σ₃ = 4.313` versus `σ₁ = 10.849`. This is
+consistent with the motion sampler using approximately ±22° roll and pitch but
+±60° yaw, so z-axis rotation dominates by design. The direction is nevertheless
+constrained strongly enough that the stacked system remains full rank.
 
-```text
-n
-```
-
-Rotation around that axis leaves the axis itself unchanged.
-
-Therefore:
-
-```text
-(R_A - I) n = 0
-```
-
-and the calibration equations contain no sensitivity to the component of `t_X` along that direction.
-
-That translation component is therefore not observable from the available motion set.
-
-When least squares is used to solve the underconstrained system, it returns a minimum-norm solution. In the deliberately constructed experiment, this causes the unconstrained translation component to collapse toward zero even though the true camera offset along that direction is 81 mm.
+For the yaw-only set, `σ₃ = 1.464e-15`, approximately fifteen orders of
+magnitude below the smallest singular value of the diverse set. Reporting this
+smallest singular value directly is more informative than reducing the result
+to an infinite condition number.
 
 ---
 
@@ -281,36 +282,6 @@ By contrast, when the well-conditioned motion set is used, all three methods pro
 This illustrates an important calibration principle:
 
 > Agreement between multiple solvers under a well-designed motion set is useful evidence of consistency, but no solver can recover information that is absent from the observations.
-
----
-
-# Detecting poor motion diversity before calibration
-
-The script performs a simple motion-diversity check before solving the hand-eye problem.
-
-`01_handeye.py` measures the angular spread between the rotation axes of the relative robot motions.
-
-For the normal motion set, the spread is approximately:
-
-```text
-90°
-```
-
-For the yaw-only degenerate motion set, it is approximately:
-
-```text
-0°
-```
-
-A near-zero value indicates that the calibration motions are rotating around essentially the same axis.
-
-This provides a useful practical warning before calibration is attempted.
-
-However, it is important to distinguish this heuristic from a complete observability analysis.
-
-The current implementation detects the deliberately constructed single-axis failure, but it does not yet compute a full conditioning metric based on the singular values or rank of the calibration system.
-
-A stronger conditioning analysis is therefore listed as future work.
 
 ---
 
@@ -469,9 +440,10 @@ The Stage 2 results support the following conclusions:
 
 * The synthetic hand-eye calibration pipeline can recover the known camera mounting transform with sub-millimetre error under ideal synthetic observations.
 * Tsai-Lenz, Park-Martin, and Andreff produce closely agreeing results for the well-conditioned baseline experiment.
-* Added image-corner noise significantly increases the final calibration error.
-* Yaw-only robot motion produces an observable calibration degeneracy.
-* Poor rotational diversity can leave translation components unobservable.
+* Added image-corner noise significantly increases the final calibration error in the development run described above.
+* Yaw-only robot motion makes the stacked translation system rank deficient before solving.
+* The SVD identifies the unobservable translation direction directly from the flange motions.
+* In the yaw-only experiment, the weakest direction is `[-0.000 -0.000 -1.000]`, and the recovered translation error is concentrated in z.
 * Coordinate-frame consistency is critical when combining MuJoCo/OpenGL and OpenCV.
 
 ### Not supported
@@ -480,7 +452,8 @@ The current experiments do **not** establish that:
 
 * a real robot will achieve 0.591 mm hand-eye accuracy;
 * the synthetic noise model captures every real camera error source;
-* the simple rotation-axis-spread metric is a complete observability test;
+* the axis-spread heuristic is a complete observability test;
+* the uncommitted 0.3 px noise and OpenCV cross-check figures are reproducible repository results;
 * the calibration has already been validated on physical hardware.
 
 These limitations are intentional and are documented to keep the reported conclusions within the evidence produced by the experiment.
@@ -511,21 +484,13 @@ For this reason, the simulation results are best interpreted as verification of 
 
 # Future improvements
 
-The two main extensions planned for this stage are:
+The main extension planned for this stage is:
 
-### 1. Real robot hand-eye calibration
+### Real robot hand-eye calibration
 
 Repeat the experiment using a physical robot, camera, and calibration board.
 
-This would make it possible to compare the simulation-derived behaviour against real measurement uncertainty.
-
-### 2. Stronger observability analysis
-
-The current rotation-axis-spread check successfully detects the deliberately constructed yaw-only failure.
-
-A more rigorous extension would analyse the numerical conditioning of the hand-eye calibration system, for example through singular values, matrix rank, or condition-number-based diagnostics.
-
-This would provide a more general measure of whether the selected calibration motions contain enough independent information.
+This would make it possible to compare the simulation-derived behaviour against real measurement uncertainty and test how the SVD-based motion diagnostic behaves with real measurement noise.
 
 ---
 
@@ -539,39 +504,21 @@ This would provide a more general measure of whether the selected calibration mo
 * [x] Added image-corner-noise experiment
 * [x] Deliberately degenerate yaw-only motion experiment
 * [x] Basic relative-motion rotation-axis diversity warning
+* [x] Singular-value / conditioning-based observability diagnostic
 * [x] MuJoCo/OpenGL → OpenCV camera-frame conversion
 * [x] Base-frame board-pose consistency verification
 * [ ] Real robot hand-eye calibration
-* [ ] Singular-value / conditioning-based observability diagnostic
 
 ---
 
 # Key result
 
-Under ideal synthetic observations, the best recovered hand-eye transform has approximately:
+Under ideal synthetic observations, the best recovered hand-eye transform has approximately **0.591 mm translation error** and **0.077° rotation error**.
 
-```text
-0.591 mm translation error
-0.077° rotation error
-```
+A separate development run with approximately **0.3 px image-corner noise** produced roughly **6 mm translation error** and **0.8° rotation error**, but that run is not currently committed as a Stage 2 result artifact.
 
-With approximately **0.3 px image-corner noise**, the best result degrades to roughly:
+The deliberately degenerate yaw-only experiment is analysed in **Detecting the degeneracy before solving** above. The important result is that the SVD exposes the missing translation direction from the flange motions alone, before the hand-eye solve is attempted.
 
-```text
-6 mm translation error
-0.8° rotation error
-```
+The central result of this stage is therefore not only the baseline calibration accuracy:
 
-The deliberately degenerate yaw-only experiment produces an approximately:
-
-```text
-81 mm error
-```
-
-in the unobservable translation component despite a very small reported rotation error.
-
-The central result of this stage is therefore not only the baseline calibration accuracy.
-
-It is the demonstration that:
-
-> **Hand-eye calibration quality depends on both measurement quality and the geometric observability of the robot motion set. A numerically plausible result can still be physically wrong when the calibration motions are degenerate.**
+> **Hand-eye calibration quality depends on both measurement quality and the geometric observability of the robot motion set. A numerically plausible result can still be physically wrong when the calibration motions are degenerate, and the singular values of the motion system can expose that failure before solving.**
