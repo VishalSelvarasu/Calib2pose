@@ -22,7 +22,7 @@ purpose.
 |---|---|---|
 | [1. Camera intrinsics (ChArUco)](stage1_intrinsics/) | `fx` recovered within 0.10% of ground truth | Synthetic validation complete; real capture pending |
 | [2. Hand-eye calibration](stage2_handeye/) | 0.591 mm / 0.077° against a known camera mount | Simulation complete |
-| [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d | Simulation complete |
+| [3. 6D pose with ArUco markers](stage3_pose/) | 1.40 mm mean ADD, 100% ADD-0.1d on 28 views | Simulation complete |
 | [4. 6D pose with learned keypoints](stage4_keypoints/) | 11.21 mm mean ADD, 90.2% ADD-0.1d (90.0% without ground-truth keypoint filtering) | Synthetic evaluation complete |
 | [5. Task-level UR5e evaluation](stage5_task_error/) | 84.8% of trials within a 15 mm placement tolerance | Simulation complete |
 
@@ -95,6 +95,13 @@ The evaluation originally used ground-truth keypoint visibility to decide which
 correspondences reached PnP, which a deployed system would not have. Re-running
 without it gives 90.0% instead of 90.2%, so the protocol was not what produced
 the result.
+
+
+Pass rates are proportions on a finite test set, so I report 95% Wilson
+intervals with them. On 1,000 images, 90.2% is [88.2%, 91.9%] and the
+no-oracle 90.0% is [88.0%, 91.7%]. Those intervals overlap almost entirely,
+which is the statistical form of the point above: keypoint selection is not
+what produced this result.
 
 ## Stage 5: benchmark tolerance and task tolerance are not the same thing
 

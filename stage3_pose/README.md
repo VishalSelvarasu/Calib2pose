@@ -41,6 +41,11 @@ enough visible marker corners for PnP.
 | True hand-eye, 0.5 px corner noise | 1.66 mm | 1.47 mm | 4.23 mm | 100% |
 | **Degenerate Stage 2 hand-eye (~81 mm error)** | **81.40 mm** | **81.37 mm** | **84.07 mm** | **0%** |
 
+The 100% ADD-0.1d pass rate is 28 of 28 evaluated views. With that few samples
+the 95% Wilson lower bound is 87.9%, so this should be read as "no failures
+observed in 28 views" rather than as evidence that the marker pipeline never
+fails.
+
 For the baseline run, mean reprojection error is 0.533 px and mean rotation
 error is 0.390°. A 1.40 mm ADD on a 226.3 mm object is about 0.6% of the object
 diameter.

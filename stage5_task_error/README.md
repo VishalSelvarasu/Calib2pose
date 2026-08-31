@@ -41,14 +41,15 @@ the placement error is below 15 mm.
 | Stage 3 markers | 1.23 mm | 1.03 mm | 2.15 mm | 3.38 mm | **100%** |
 | Stage 4 learned keypoints | 9.63 mm | 6.15 mm | 18.57 mm | 116.11 mm | **84.8%** |
 
+
+84.8% within 15 mm is 424 of 500 trials, 95% Wilson interval [81.4%, 87.7%].
+
 The mean IK residual is about **0.04 mm**, which is much smaller than the
 perception-induced placement errors. For this setup, the kinematic solver is not
 the main source of error.
 
-The Stage 3 distribution should be interpreted with some caution. Its source
-pose file contains only 28 evaluated object poses, so resampling those errors 200
-times does not provide much information about the true tail of a marker-based
-system.
+The effective sample size for that row is 28, not 200, so its 100% should be
+read the same way as the Stage 3 result itself.
 
 ## The task tolerance changes the conclusion
 
