@@ -124,7 +124,8 @@ def coverage_image(all_corners, size, path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--images", default="captures")
+    ap.add_argument("--images", default=["captures"], nargs="+",
+                    help="one or more capture directories")
     ap.add_argument("--square-mm", type=float, default=None,
                     help="measured printed square size; overrides board_config")
     ap.add_argument("--min-corners", type=int, default=12)
@@ -141,8 +142,9 @@ def main():
     board = bc.get_board(square_m)
     detector = bc.get_detector(board)
 
-    paths = sorted(glob.glob(os.path.join(args.images, "*.png")) +
-                   glob.glob(os.path.join(args.images, "*.jpg")))
+    paths = sorted(p for d in args.images
+                   for pat in ("*.png", "*.jpg")
+                   for p in glob.glob(os.path.join(d, pat)))
     if not paths:
         raise SystemExit(
             f"No images in {args.images}/. Run 02_capture.py first.")
