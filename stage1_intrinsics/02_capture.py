@@ -183,11 +183,25 @@ def main():
     ap.add_argument("--width", type=int, default=1280)
     ap.add_argument("--height", type=int, default=720)
     ap.add_argument("--out", default="captures")
+    ap.add_argument("--tag", default="",
+                    help="what this session is, e.g. 'diverse' or 'frontal'. "
+                         "Recorded in session.json so the two pose sets can be "
+                         "told apart later.")
     ap.add_argument("--min-sharpness", type=float, default=MIN_SHARPNESS)
     ap.add_argument("--min-corners", type=int, default=MIN_CORNERS)
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
+    existing = sorted(f for f in os.listdir(args.out)
+                      if f.startswith("calib_") and f.endswith(".png"))
+    if existing:
+        raise SystemExit(
+            f"{args.out}/ already contains {len(existing)} captures "
+            f"({existing[0]} ... {existing[-1]}).\n"
+            f"This script restarts numbering at calib_000.png and would "
+            f"overwrite them, along with session.json.\n"
+            f"Use --out with a new directory, or move the existing files "
+            f"aside first.")
 
     board = bc.get_board()
     detector = bc.get_detector(board)
@@ -324,6 +338,7 @@ def main():
 
     meta = {
         "n_images": state["n"],
+        "tag": args.tag,
         "image_size": [w, h],
         "camera_index": args.cam,
         "camera_lock_report": {k: {kk: float(vv) for kk, vv in v.items()}
@@ -349,7 +364,8 @@ def main():
     if missing_t:
         print(f"tilt bins still short: {[TILT_BINS[i] for i in missing_t]}")
     if state["n"] < 15:
-        print("Under 15 images. Run again and append -- 20-30 is the target.")
+        print("Under 15 images. 20-30 is the target -- capture more in a new "
+              "directory with --out, then calibrate on both together.")
 
 
 if __name__ == "__main__":
